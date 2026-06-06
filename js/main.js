@@ -1,4 +1,4 @@
-// Math Outlaw Quest - Game Engine (Version 2)
+// Math Outlaw Quest - Game Engine (Version 3)
 
 // ===== GAME STATE =====
 let gameState = {
@@ -49,6 +49,20 @@ let gameState = {
   isTimedOut: false,
   retryActive: false,
   retryQuestion: null,
+
+  // V3: Debug mode
+  debugMode: false,
+  debugSettings: {
+    timerEnabled: true,
+    chainEnabled: true,
+    supportBoardOverride: null, // true=force on, false=force off, null=auto
+    vocabHighlightsEnabled: true,
+    readAloudEnabled: true,
+    writingLayerEnabled: true,
+  },
+
+  // V3: Daily quest
+  dailyQuest: null,
 };
 
 // ===== SAVE SYSTEM =====
@@ -77,6 +91,17 @@ function loadGame() {
         if (!gameState.selectedDifficulty[world]) {
           gameState.selectedDifficulty[world] = "easy";
         }
+      }
+      // Ensure debug settings exist
+      if (!gameState.debugSettings) {
+        gameState.debugSettings = {
+          timerEnabled: true,
+          chainEnabled: true,
+          supportBoardOverride: null,
+          vocabHighlightsEnabled: true,
+          readAloudEnabled: true,
+          writingLayerEnabled: true,
+        };
       }
       return true;
     }
@@ -136,6 +161,11 @@ function generateQuestion() {
 
 // ===== CHAIN SYSTEM =====
 function updateChain(isCorrect) {
+  // Check debug override for chain
+  if (!gameState.debugSettings.chainEnabled) {
+    return;
+  }
+
   if (isCorrect) {
     gameState.chain++;
     if (gameState.chain > gameState.bestChain) {
@@ -168,8 +198,25 @@ function updateChainDisplay() {
 
 // ===== TIMER SYSTEM =====
 function startTimer(difficulty) {
+  // Check if timer should run (Reading Trail has no timer, debug may disable it)
+  const world = WORLDS[gameState.selectedWorld];
+  if (world && world.hasTimer === false) {
+    // Reading Trail: hide timer display, no timer
+    const timerContainer = document.getElementById("timerContainer");
+    if (timerContainer) timerContainer.style.display = "none";
+    return;
+  }
+  if (!gameState.debugSettings.timerEnabled) {
+    const timerContainer = document.getElementById("timerContainer");
+    if (timerContainer) timerContainer.style.display = "none";
+    return;
+  }
+
+  // Show timer container
+  const timerContainer = document.getElementById("timerContainer");
+  if (timerContainer) timerContainer.style.display = "flex";
+
   stopTimer();
-  const worldId = gameState.selectedWorld;
   const timerDuration = DIFFICULTY_TIMERS[difficulty] || 30;
   gameState.timeRemaining = timerDuration;
   gameState.isTimedOut = false;
@@ -308,6 +355,9 @@ function checkAnswer(playerAnswer) {
       gameState.worldProgress[worldId].total++;
     }
 
+    // Update daily quest progress
+    updateDailyQuestProgress(worldId);
+
     if (gameState.totalCorrect % 10 === 0) {
       gameState.stars++;
       showNotification("⭐ You earned a star! ⭐");
@@ -319,8 +369,10 @@ function checkAnswer(playerAnswer) {
     const feedback = document.getElementById("feedback");
     feedback.className = "feedback correct";
     let bonusText = "";
-    if (timeBonus > 0) bonusText += ` ⚡+${timeBonus}`;
-    if (chainBonus > 0) bonusText += ` 🔗+${chainBonus}`;
+    if (timeBonus > 0 && gameState.debugSettings.timerEnabled)
+      bonusText += ` ⚡+${timeBonus}`;
+    if (chainBonus > 0 && gameState.debugSettings.chainEnabled)
+      bonusText += ` 🔗+${chainBonus}`;
     feedback.textContent = `✅ Correct! +10${bonusText} XP`;
 
     const answerInput = document.getElementById("answerInput");
@@ -368,6 +420,45 @@ function checkAnswer(playerAnswer) {
   return isCorrect;
 }
 
+// ===== HELP BUTTON =====
+function showHelp() {
+  if (!gameState.currentQuestion) return;
+
+  // Show hint immediately (no need for 2 wrong attempts)
+  const question = gameState.currentQuestion;
+  const world = WORLDS[question.world];
+
+  // Try to get hint from the question object first, then from world
+  let hintText = question.hint || null;
+  if (!hintText && world && world.getHint) {
+    hintText = world.getHint(question.question || question);
+  }
+  if (!hintText) {
+    hintText =
+      "Try breaking the problem into smaller steps. Read carefully and think about what operation to use.";
+  }
+
+  const hintBox = document.getElementById("hintBox");
+  if (hintBox) {
+    // Use the question's hint if available (for reading trail), otherwise use world hint
+    const hint =
+      question.hint ||
+      (world && world.getHint
+        ? world.getHint(question.question || question)
+        : hintText);
+    hintBox.innerHTML = `💡 <strong>Hint:</strong><br>${hint.replace(/\n/g, "<br>")}`;
+    hintBox.className = "hint-box visible";
+    gameState.hintsUsed++;
+  }
+
+  // Also show feedback that help was given
+  const feedback = document.getElementById("feedback");
+  if (feedback && !feedback.textContent) {
+    feedback.textContent = "💡 Try using the hint above!";
+    feedback.className = "feedback";
+  }
+}
+
 // ===== SCREEN NAVIGATION =====
 function showScreen(screenId) {
   document.querySelectorAll(".screen").forEach((s) => {
@@ -389,6 +480,9 @@ function showScreen(screenId) {
     renderDashboard();
     updateStatusBar();
   }
+
+  // Update debug label visibility
+  updateDebugLabel();
 }
 
 // ===== MAP RENDERING =====
@@ -433,9 +527,9 @@ function renderMap() {
                 </div>
                 <div class="world-pct">${pct}%</div>
                 <div class="difficulty-selector">
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "easy" ? "active" : ""}" onclick="selectDifficulty('easy', '${worldId}')">Easy</button>
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "medium" ? "active" : ""}" onclick="selectDifficulty('medium', '${worldId}')">Medium</button>
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "hard" ? "active" : ""}" onclick="selectDifficulty('hard', '${worldId}')">Hard</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "easy" ? "active" : ""}" onclick="selectDifficulty('easy', '${worldId}', event)">Easy</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "medium" ? "active" : ""}" onclick="selectDifficulty('medium', '${worldId}', event)">Medium</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "hard" ? "active" : ""}" onclick="selectDifficulty('hard', '${worldId}', event)">Hard</button>
                 </div>
                 <button class="play-btn" onclick="playWorld('${worldId}')" style="background: ${world.color}">▶ Play</button>
             `
@@ -450,7 +544,11 @@ function renderMap() {
   mapContainer.appendChild(worldGrid);
 }
 
-function selectDifficulty(diff, worldId) {
+function selectDifficulty(diff, worldId, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
   gameState.selectedDifficulty[worldId] = diff;
   gameState.selectedWorld = worldId;
   renderMap();
@@ -462,7 +560,82 @@ function playWorld(worldId) {
   // Reset chain when switching worlds
   gameState.chain = 0;
   updateChainDisplay();
+
+  // Apply reading theme if it's the reading trail
+  const world = WORLDS[worldId];
+  if (worldId === "mathReadingTrail") {
+    const themeIndex = gameState.questionCount;
+    const themeName = getReadingThemeForIndex(themeIndex);
+    applyReadingTheme(themeName);
+  } else {
+    clearReadingTheme();
+  }
+
   showScreen("game");
+}
+
+// ===== READING THEME SYSTEM =====
+function applyReadingTheme(themeName) {
+  const config = THEME_CONFIGS[themeName];
+  if (!config) {
+    clearReadingTheme();
+    return;
+  }
+
+  const appEl = document.getElementById("app");
+  const decorEl = document.getElementById("themeDecorations");
+  const gameEl = document.getElementById("game");
+
+  if (appEl) {
+    appEl.style.background = config.background;
+    appEl.style.backgroundImage = `linear-gradient(135deg, ${config.background}, ${adjustColor(config.background, -20)})`;
+  }
+  if (gameEl) {
+    gameEl.style.background = "transparent";
+  }
+
+  if (decorEl) {
+    decorEl.innerHTML = "";
+    config.decorations.forEach((deco) => {
+      const el = document.createElement("div");
+      el.className = "deco";
+      el.textContent = deco.emoji;
+      el.style.top = deco.top || "auto";
+      el.style.left = deco.left || "auto";
+      el.style.right = deco.right || "auto";
+      el.style.fontSize = deco.size || "2rem";
+      el.style.opacity = deco.opacity || 0.12;
+      decorEl.appendChild(el);
+    });
+  }
+}
+
+function clearReadingTheme() {
+  const appEl = document.getElementById("app");
+  const decorEl = document.getElementById("themeDecorations");
+  const gameEl = document.getElementById("game");
+
+  if (appEl) {
+    appEl.style.background = "";
+    appEl.style.backgroundImage = "";
+  }
+  if (gameEl) {
+    gameEl.style.background = "";
+  }
+  if (decorEl) {
+    decorEl.innerHTML = "";
+  }
+}
+
+function adjustColor(hex, amount) {
+  // Simple color darken/lighten
+  if (!hex) return hex;
+  hex = hex.replace("#", "");
+  const num = parseInt(hex, 16);
+  let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+  let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount));
+  let b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
 // ===== GAME SCREEN =====
@@ -486,6 +659,10 @@ function startNewQuestion(isRetry) {
   answerInput.disabled = false;
   submitBtn.disabled = false;
   if (retryContainer) retryContainer.className = "retry-container";
+
+  // Only clear work area for each new question
+  clearCanvas();
+
   answerInput.focus();
 
   // Show world context
@@ -505,17 +682,23 @@ function startNewQuestion(isRetry) {
 
   questionContainer.innerHTML = html;
 
-  // Attach vocabulary click handlers
-  document.querySelectorAll(".vocab-word").forEach((el) => {
-    el.addEventListener("click", function (e) {
-      e.stopPropagation();
-      const vocabKey = this.dataset.vocab;
-      const worldData = WORLDS.mathReadingTrail;
-      if (worldData && worldData.vocabulary && worldData.vocabulary[vocabKey]) {
-        showVocabPopup(vocabKey, worldData.vocabulary[vocabKey]);
-      }
+  // Attach vocabulary click handlers (if vocab highlights enabled)
+  if (gameState.debugSettings.vocabHighlightsEnabled !== false) {
+    document.querySelectorAll(".vocab-word").forEach((el) => {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const vocabKey = this.dataset.vocab;
+        const worldData = WORLDS.mathReadingTrail;
+        if (
+          worldData &&
+          worldData.vocabulary &&
+          worldData.vocabulary[vocabKey]
+        ) {
+          showVocabPopup(vocabKey, worldData.vocabulary[vocabKey]);
+        }
+      });
     });
-  });
+  }
 
   // Handle fraction answers
   if (typeof question.answer === "string" && question.answer.includes("/")) {
@@ -530,20 +713,23 @@ function startNewQuestion(isRetry) {
   // Show support board if available
   renderSupportBoard(question.world);
 
-  // Show read-aloud button for reading trail
-  if (question.world === "mathReadingTrail") {
-    const readAloudContainer = document.getElementById("readAloudContainer");
-    if (readAloudContainer) {
+  // Show read-aloud button for reading trail (if enabled)
+  const worldHasReadAloud =
+    question.world === "mathReadingTrail" &&
+    gameState.debugSettings.readAloudEnabled !== false;
+  const readAloudContainer = document.getElementById("readAloudContainer");
+  if (readAloudContainer) {
+    // Reading Trail shows read-aloud prompt as text guidance, no recording buttons
+    if (worldHasReadAloud) {
       readAloudContainer.className = "read-aloud-container visible";
-    }
-  } else {
-    const readAloudContainer = document.getElementById("readAloudContainer");
-    if (readAloudContainer) {
+      readAloudContainer.innerHTML = `<span style="color: white; font-size: 0.85rem; opacity: 0.8;">📖 Read the story aloud naturally</span>`;
+    } else {
       readAloudContainer.className = "read-aloud-container";
+      readAloudContainer.innerHTML = "";
     }
   }
 
-  // Start timer
+  // Start timer (won't start for Reading Trail)
   const difficulty =
     question.difficulty ||
     gameState.selectedDifficulty[question.world] ||
@@ -553,8 +739,8 @@ function startNewQuestion(isRetry) {
   // Update chain display
   updateChainDisplay();
 
-  // Update handwriting toggle
-  updateHandwritingToggle();
+  // Update work area visibility based on debug setting
+  setDrawingLayerEnabled(gameState.debugSettings.writingLayerEnabled !== false);
 }
 
 function submitAnswer() {
@@ -587,6 +773,9 @@ function showHint(question) {
 
 // ===== VOCABULARY POPUP =====
 function showVocabPopup(word, definition) {
+  // Check if vocab highlights are disabled
+  if (gameState.debugSettings.vocabHighlightsEnabled === false) return;
+
   // Remove existing popup
   const existing = document.getElementById("vocabPopup");
   if (existing) existing.remove();
@@ -621,7 +810,16 @@ function renderSupportBoard(worldId) {
     return;
   }
 
-  const visibility = getSupportVisibility(worldId);
+  // Check debug override
+  let visibility;
+  if (gameState.debugSettings.supportBoardOverride === true) {
+    visibility = 1;
+  } else if (gameState.debugSettings.supportBoardOverride === false) {
+    visibility = 0;
+  } else {
+    visibility = getSupportVisibility(worldId);
+  }
+
   if (visibility <= 0) {
     supportContainer.className = "support-board-container";
     supportContainer.innerHTML = "";
@@ -673,97 +871,106 @@ function getSupportLevel(worldId) {
   return "Master";
 }
 
-// ===== READ-ALOUD MODE =====
-let mediaRecorder = null;
-let audioChunks = [];
-let audioBlob = null;
-let audioUrl = null;
-let isRecording = false;
+// ===== DAILY QUEST SYSTEM =====
+function initDailyQuest() {
+  const today = new Date().toISOString().split("T")[0];
 
-function toggleRecording() {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
-}
-
-function startRecording() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showNotification("🎤 Recording not supported on this device");
+  // If we already have a quest for today, use it
+  if (gameState.dailyQuest && gameState.dailyQuest.date === today) {
+    updateDailyQuestBanner();
     return;
   }
 
-  navigator.mediaDevices
-    .getUserMedia({ audio: true })
-    .then((stream) => {
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        audioUrl = URL.createObjectURL(audioBlob);
-        const playbackBtn = document.getElementById("playbackBtn");
-        if (playbackBtn) {
-          playbackBtn.style.display = "inline-block";
-        }
-        // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.start();
-      isRecording = true;
-
-      const recordBtn = document.getElementById("recordBtn");
-      if (recordBtn) {
-        recordBtn.textContent = "🔴 Recording...";
-        recordBtn.classList.add("recording");
-      }
-
-      showNotification("🎤 Recording started...");
-    })
-    .catch((err) => {
-      showNotification("🎤 Microphone access denied");
-      console.log("Mic error:", err);
-    });
+  // Generate new quest for today
+  const newQuest = generateDailyQuest(gameState.unlockedWorlds);
+  if (newQuest) {
+    gameState.dailyQuest = newQuest;
+    saveGame();
+    updateDailyQuestBanner();
+  }
 }
 
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    mediaRecorder.stop();
-    isRecording = false;
+function updateDailyQuestProgress(worldId) {
+  if (!gameState.dailyQuest || gameState.dailyQuest.completed) return;
 
-    const recordBtn = document.getElementById("recordBtn");
-    if (recordBtn) {
-      recordBtn.textContent = "🎤 Record";
-      recordBtn.classList.remove("recording");
+  const quest = gameState.dailyQuest;
+  let updated = false;
+
+  quest.targets.forEach((target, i) => {
+    if (target.world === worldId && quest.progress[i] < target.count) {
+      quest.progress[i]++;
+      updated = true;
     }
+  });
 
-    showNotification("✅ Recording saved!");
+  if (updated) {
+    // Check if all targets completed
+    const allDone = quest.targets.every((t, i) => quest.progress[i] >= t.count);
+    if (allDone && !quest.completed) {
+      quest.completed = true;
+      showNotification("🎉 Daily Quest Complete! Claim your reward!");
+    }
+    saveGame();
+    updateDailyQuestBanner();
   }
 }
 
-function playRecording() {
-  if (audioUrl) {
-    const audio = new Audio(audioUrl);
-    audio.play();
+function updateDailyQuestBanner() {
+  const banner = document.getElementById("dailyQuestBanner");
+  const targetsEl = document.getElementById("dailyQuestTargets");
+  const claimBtn = document.getElementById("dailyQuestClaimBtn");
+
+  if (!banner || !gameState.dailyQuest) {
+    if (banner) banner.style.display = "none";
+    return;
+  }
+
+  const quest = gameState.dailyQuest;
+
+  // Check if already claimed
+  if (quest.rewardClaimed) {
+    banner.style.display = "none";
+    return;
+  }
+
+  banner.style.display = "block";
+
+  // Build target list
+  let html = "";
+  quest.targets.forEach((target, i) => {
+    const done = quest.progress[i] >= target.count;
+    html += `<div class="quest-item">
+      <span class="quest-check">${done ? "✅" : "⬜"}</span>
+      <span>${target.count} ${target.name} ${done ? "✓" : `(${quest.progress[i]}/${target.count})`}</span>
+    </div>`;
+  });
+  targetsEl.innerHTML = html;
+
+  // Show claim button if completed
+  if (quest.completed && !quest.rewardClaimed) {
+    claimBtn.style.display = "inline-block";
+  } else {
+    claimBtn.style.display = "none";
   }
 }
 
-function deleteRecording() {
-  if (audioUrl) {
-    URL.revokeObjectURL(audioUrl);
-    audioUrl = null;
-    audioBlob = null;
-  }
-  const playbackBtn = document.getElementById("playbackBtn");
-  if (playbackBtn) {
-    playbackBtn.style.display = "none";
-  }
+function claimDailyQuestReward() {
+  if (
+    !gameState.dailyQuest ||
+    !gameState.dailyQuest.completed ||
+    gameState.dailyQuest.rewardClaimed
+  )
+    return;
+
+  gameState.dailyQuest.rewardClaimed = true;
+  gameState.stars += DAILY_QUEST_CONFIG.rewardStars;
+  gameState.xp += DAILY_QUEST_CONFIG.rewardXP;
+
+  saveGame();
+  updateDailyQuestBanner();
+  updateStatusBar();
+
+  showNotification(`🎁 Claimed! +${DAILY_QUEST_CONFIG.rewardXP} XP + ⭐ Star`);
 }
 
 // ===== FEEDBACK =====
@@ -891,6 +1098,29 @@ function renderDashboard() {
   worldProgressCard.appendChild(progList);
   dashboardContent.appendChild(worldProgressCard);
 
+  // Daily Quest Status
+  if (gameState.dailyQuest && !gameState.dailyQuest.rewardClaimed) {
+    const questCard = document.createElement("div");
+    questCard.className = "stats-card";
+    const quest = gameState.dailyQuest;
+    let questHtml = `<h3>📅 Today's Quest</h3><div class="world-progress-list">`;
+    quest.targets.forEach((t, i) => {
+      const done = quest.progress[i] >= t.count;
+      questHtml += `<div class="world-progress-row">
+        <span class="wp-emoji">${done ? "✅" : "⬜"}</span>
+        <span class="wp-name">${t.count} ${t.name}</span>
+        <div class="wp-bar"><div class="wp-fill" style="width: ${Math.min((quest.progress[i] / t.count) * 100, 100)}%; background: #ffb300;"></div></div>
+        <span class="wp-pct">${quest.progress[i]}/${t.count}</span>
+      </div>`;
+    });
+    questHtml += `</div>`;
+    if (quest.completed && !quest.rewardClaimed) {
+      questHtml += `<button class="debug-btn" style="margin-top:10px;" onclick="claimDailyQuestReward()">🎁 Claim Reward (⭐ + ${DAILY_QUEST_CONFIG.rewardXP} XP)</button>`;
+    }
+    questCard.innerHTML = questHtml;
+    dashboardContent.appendChild(questCard);
+  }
+
   // Tips & Debug
   const tipsCard = document.createElement("div");
   tipsCard.className = "stats-card";
@@ -904,62 +1134,167 @@ function renderDashboard() {
             <li>🌟 Stars are earned every 10 correct answers</li>
             <li>🔥 Build chains of 3, 5, or 10 for bonus XP!</li>
             <li>🔍 Support boards fade as you master each world</li>
+            <li>📝 Use the Work Area to draw calculations</li>
+            <li>💡 Tap "I Need Help" for guided hints</li>
         </ul>
         <button class="danger-btn" onclick="resetGame()">🗑️ Reset All Progress</button>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
         <div style="display: flex; gap: 10px;">
-            <button class="debug-btn" onclick="debugUnlockAll()">🔓 Unlock All Worlds</button>
-            <button class="debug-btn" onclick="debugLockAll()">🔒 Lock All Worlds</button>
+            <button class="debug-btn" onclick="debugUnlockAllWorlds()">🔓 Unlock All Worlds</button>
+            <button class="debug-btn" onclick="debugLockAllWorlds()">🔒 Lock All Worlds</button>
         </div>
         <div style="font-size: 0.75rem; color: #999; margin-top: 8px; text-align: center;">Debug Tools — for testing only</div>
     `;
   dashboardContent.appendChild(tipsCard);
 }
 
-// ===== HANDWRITING TOGGLE =====
-function toggleHandwriting() {
-  const canvas = document.getElementById("handwritingCanvas");
-  const canvasControls = document.getElementById("handwritingControls");
-  const answerInput = document.getElementById("answerInput");
+// ===== DEBUG PANEL =====
+function toggleDebugPanel() {
+  const panel = document.getElementById("debugPanel");
+  if (!panel) return;
 
-  if (!canvas || !canvasControls) return;
+  const isVisible = panel.style.display !== "none";
+  panel.style.display = isVisible ? "none" : "flex";
 
-  const isVisible = canvas.style.display !== "none";
-  if (isVisible) {
-    canvas.style.display = "none";
-    canvasControls.style.display = "none";
-    answerInput.style.display = "block";
-  } else {
-    canvas.style.display = "block";
-    canvasControls.style.display = "flex";
-    answerInput.style.display = "none";
+  if (!isVisible) {
+    // Enable debug mode when opening panel
+    gameState.debugMode = true;
+    updateDebugLabel();
   }
 }
 
-function updateHandwritingToggle() {
-  const canvas = document.getElementById("handwritingCanvas");
-  if (canvas) {
-    // Leave canvas hidden by default on new questions
+function updateDebugLabel() {
+  const label = document.getElementById("debugModeLabel");
+  if (!label) return;
+
+  if (gameState.debugMode) {
+    label.style.display = "block";
+  } else {
+    label.style.display = "none";
   }
 }
 
 // ===== DEBUG FUNCTIONS =====
-function debugUnlockAll() {
-  const allWorldIds = Object.keys(WORLDS);
-  gameState.unlockedWorlds = allWorldIds;
+function debugAddXP(amount) {
+  gameState.xp += amount;
+  gameState.debugMode = true;
+  checkUnlocks();
   saveGame();
-  showNotification("🔓 All worlds unlocked!");
-  renderDashboard();
+  updateStatusBar();
+  showNotification(`⭐ +${amount} XP added`);
+  updateDebugLabel();
 }
 
-function debugLockAll() {
+function debugRemoveXP(amount) {
+  gameState.xp = Math.max(0, gameState.xp - amount);
+  gameState.debugMode = true;
+  saveGame();
+  updateStatusBar();
+  showNotification(`⭐ ${amount} XP removed`);
+  updateDebugLabel();
+}
+
+function debugSetXP(amount) {
+  gameState.xp = amount;
+  gameState.debugMode = true;
+  checkUnlocks();
+  saveGame();
+  updateStatusBar();
+  showNotification(`⭐ XP set to ${amount}`);
+  updateDebugLabel();
+}
+
+function debugSupportForce(forceOn) {
+  gameState.debugSettings.supportBoardOverride = forceOn;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`📋 Support Board ${forceOn ? "Forced ON" : "Forced OFF"}`);
+  updateDebugLabel();
+  // Re-render support board if on game screen
+  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
+    renderSupportBoard(gameState.selectedWorld);
+  }
+}
+
+function debugSupportAuto() {
+  gameState.debugSettings.supportBoardOverride = null;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification("📋 Support Board: Auto mode");
+  updateDebugLabel();
+  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
+    renderSupportBoard(gameState.selectedWorld);
+  }
+}
+
+function debugUnlockAllWorlds() {
+  const allWorldIds = Object.keys(WORLDS);
+  gameState.unlockedWorlds = allWorldIds;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification("🔓 All worlds unlocked!");
+  updateDebugLabel();
+  if (gameState.currentScreen === "map") renderMap();
+  if (gameState.currentScreen === "dashboard") renderDashboard();
+}
+
+function debugLockAllWorlds() {
   gameState.unlockedWorlds = ["numberRanch", "subtractionCanyon"];
   gameState.xp = 0;
+  gameState.debugMode = true;
   saveGame();
   showNotification(
     "🔒 Worlds locked to default (Number Ranch, Subtraction Canyon)",
   );
-  renderDashboard();
+  updateDebugLabel();
+  if (gameState.currentScreen === "map") renderMap();
+  if (gameState.currentScreen === "dashboard") renderDashboard();
+}
+
+function debugTimerToggle(enabled) {
+  gameState.debugSettings.timerEnabled = enabled;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`⏱️ Timer ${enabled ? "ON" : "OFF"}`);
+  updateDebugLabel();
+}
+
+function debugChainToggle(enabled) {
+  gameState.debugSettings.chainEnabled = enabled;
+  if (!enabled) {
+    gameState.chain = 0;
+    gameState.chainXpBonus = 0;
+    updateChainDisplay();
+  }
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`🔥 Chain ${enabled ? "Enabled" : "Disabled"}`);
+  updateDebugLabel();
+}
+
+function debugVocabToggle(enabled) {
+  gameState.debugSettings.vocabHighlightsEnabled = enabled;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`📖 Vocab Highlights ${enabled ? "Enabled" : "Disabled"}`);
+  updateDebugLabel();
+}
+
+function debugReadToggle(enabled) {
+  gameState.debugSettings.readAloudEnabled = enabled;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`📖 Read Aloud ${enabled ? "Enabled" : "Disabled"}`);
+  updateDebugLabel();
+}
+
+function debugDrawToggle(enabled) {
+  gameState.debugSettings.writingLayerEnabled = enabled;
+  gameState.debugMode = true;
+  setDrawingLayerEnabled(enabled);
+  saveGame();
+  showNotification(`✏️ Writing Layer ${enabled ? "Enabled" : "Disabled"}`);
+  updateDebugLabel();
 }
 
 // ===== NOTIFICATION SYSTEM =====
@@ -1019,6 +1354,7 @@ document.addEventListener("click", function (e) {
 function initGame() {
   loadGame();
   checkUnlocks();
+  initDailyQuest();
   showScreen("start");
 }
 

@@ -1,52 +1,60 @@
-// Math Outlaw Quest - Handwriting / Stylus Support
-// Pointer Events API for Apple Pencil, finger, and mouse
+// Math Outlaw Quest - Math Work Area (Finger-Optimized Drawing)
+// Pointer Events API for finger touch, pen, and mouse
 
 let isDrawing = false;
 let currentStroke = [];
 let strokes = [];
 let isEraser = false;
 let canvasCtx = null;
+let pointerCount = 0;
 
-function initHandwritingCanvas() {
-  const canvas = document.getElementById("handwritingCanvas");
+function initWorkArea() {
+  const canvas = document.getElementById("workAreaCanvas");
   if (!canvas) return;
 
   canvasCtx = canvas.getContext("2d");
-  resizeCanvas(canvas);
+  resizeWorkArea(canvas);
 
-  // Pointer events (handles pen, touch, mouse)
+  // Pointer events (handles touch, pen, mouse)
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointerleave", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerUp);
 
   // Prevent default touch behavior
   canvas.style.touchAction = "none";
 
-  // Resize on window resize
-  window.addEventListener("resize", () => resizeCanvas(canvas));
+  // Use ResizeObserver instead of just window.resize
+  const resizeObserver = new ResizeObserver(() => {
+    resizeWorkArea(canvas);
+  });
+  resizeObserver.observe(canvas);
 }
 
-function resizeCanvas(canvas) {
+function resizeWorkArea(canvas) {
+  if (!canvas || canvas.clientWidth === 0) return;
+
   const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * window.devicePixelRatio;
-  canvas.height = rect.height * window.devicePixelRatio;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
   canvasCtx = canvas.getContext("2d");
-  canvasCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  canvas.style.width = rect.width + "px";
-  canvas.style.height = rect.height + "px";
+  canvasCtx.scale(dpr, dpr);
   redrawAllStrokes();
 }
 
 function onPointerDown(e) {
   e.preventDefault();
-  const rect = e.target.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  pointerCount++;
+
+  if (pointerCount > 1) {
+    // Ignore multi-touch for drawing
+    return;
+  }
 
   if (isEraser) {
-    // Erase: check if we hit any stroke
-    eraseStrokeAt(x, y);
+    eraseStrokeAt(e);
     return;
   }
 
@@ -57,13 +65,14 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   e.preventDefault();
-  if (!isDrawing || isEraser) return;
+  if (!isDrawing || isEraser || pointerCount > 1) return;
   addPointToStroke(e);
-  drawCurrentStroke();
 }
 
 function onPointerUp(e) {
   e.preventDefault();
+  pointerCount = Math.max(0, pointerCount - 1);
+
   if (!isDrawing) return;
 
   isDrawing = false;
@@ -74,21 +83,27 @@ function onPointerUp(e) {
 }
 
 function addPointToStroke(e) {
-  const rect = e.target.getBoundingClientRect();
+  const canvas = document.getElementById("workAreaCanvas");
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+
+  // Clamp to canvas bounds
+  const clampedX = Math.max(0, Math.min(x, rect.width));
+  const clampedY = Math.max(0, Math.min(y, rect.height));
 
   // Determine line width based on pointer type
   let lineWidth = 3;
   if (e.pointerType === "pen") {
-    lineWidth = 2; // Apple Pencil = thinner
+    lineWidth = 2.5; // Stylus = thinner
   } else if (e.pointerType === "touch") {
-    lineWidth = 4; // Finger = thicker
+    lineWidth = 6; // Finger = thicker for comfortable drawing
   }
 
   currentStroke.push({
-    x,
-    y,
+    x: clampedX,
+    y: clampedY,
     pressure: e.pressure || 0.5,
     lineWidth,
   });
@@ -98,51 +113,46 @@ function addPointToStroke(e) {
     const ctx = canvasCtx;
     if (!ctx) return;
     ctx.beginPath();
-    ctx.arc(x, y, lineWidth / 2, 0, Math.PI * 2);
+    ctx.arc(clampedX, clampedY, lineWidth / 2, 0, Math.PI * 2);
     ctx.fillStyle = "#333";
     ctx.fill();
   }
+
+  // Draw incrementally for smooth feedback
+  if (currentStroke.length >= 2) {
+    drawIncremental();
+  }
 }
 
-function drawCurrentStroke() {
+function drawIncremental() {
   const ctx = canvasCtx;
   if (!ctx || currentStroke.length < 2) return;
+
+  const p1 = currentStroke[currentStroke.length - 2];
+  const p2 = currentStroke[currentStroke.length - 1];
 
   ctx.beginPath();
   ctx.strokeStyle = "#333";
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  for (let i = 0; i < currentStroke.length - 1; i++) {
-    const p1 = currentStroke[i];
-    const p2 = currentStroke[i + 1];
+  const width = p1.lineWidth * (0.5 + p1.pressure * 0.5);
+  ctx.lineWidth = width;
 
-    // Vary width by pressure
-    const width = p1.lineWidth * (0.5 + p1.pressure * 0.5);
-    ctx.lineWidth = width;
-
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-  }
-
-  // Redraw all strokes to maintain consistency
-  redrawAllStrokes();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
 }
 
 function redrawAllStrokes() {
   const ctx = canvasCtx;
   if (!ctx) return;
 
-  const canvas = document.getElementById("handwritingCanvas");
+  const canvas = document.getElementById("workAreaCanvas");
   if (!canvas) return;
 
-  ctx.clearRect(
-    0,
-    0,
-    canvas.width / window.devicePixelRatio,
-    canvas.height / window.devicePixelRatio,
-  );
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
   ctx.strokeStyle = "#333";
   ctx.lineCap = "round";
@@ -200,10 +210,17 @@ function clearCanvas() {
   redrawAllStrokes();
 }
 
-function eraseStrokeAt(x, y) {
-  // Find closest stroke and remove it
+function eraseStrokeAt(e) {
+  const canvas = document.getElementById("workAreaCanvas");
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Find closest stroke and remove it (larger hit radius for finger)
   let closestDist = Infinity;
   let closestIndex = -1;
+  const hitRadius = 30; // Increased for finger usability
 
   for (let i = 0; i < strokes.length; i++) {
     const stroke = strokes[i];
@@ -216,14 +233,25 @@ function eraseStrokeAt(x, y) {
     }
   }
 
-  if (closestIndex >= 0 && closestDist < 20) {
+  if (closestIndex >= 0 && closestDist < hitRadius) {
     strokes.splice(closestIndex, 1);
     redrawAllStrokes();
   }
 }
 
+// ===== DRAWING LAYER VISIBILITY (controlled by debug) =====
+function setDrawingLayerEnabled(enabled) {
+  const canvas = document.getElementById("workAreaCanvas");
+  const controls = document.querySelector(".work-area-controls");
+  if (canvas) {
+    canvas.style.display = enabled ? "block" : "none";
+  }
+  if (controls) {
+    controls.style.display = enabled ? "flex" : "none";
+  }
+}
+
 // Init on DOM ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Wait a tick for the canvas to be in DOM
-  setTimeout(initHandwritingCanvas, 100);
+  setTimeout(initWorkArea, 100);
 });

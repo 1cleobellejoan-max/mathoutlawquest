@@ -100,6 +100,104 @@ const SUPPORT_BOARDS = {
     `,
   },
 };
+
+// ===== THEME CONFIGURATIONS =====
+const THEME_CONFIGS = {
+  forest: {
+    background: "#e8f5e9",
+    decorations: [
+      { emoji: "🌲", top: "10%", left: "5%", size: "2.5rem", opacity: 0.12 },
+      { emoji: "🌳", top: "20%", right: "8%", size: "3rem", opacity: 0.1 },
+      { emoji: "🌿", top: "40%", left: "10%", size: "1.5rem", opacity: 0.15 },
+      { emoji: "🍃", top: "60%", right: "5%", size: "1.5rem", opacity: 0.15 },
+      { emoji: "🪨", top: "75%", left: "15%", size: "1.8rem", opacity: 0.12 },
+      { emoji: "🐿️", top: "15%", left: "40%", size: "1.5rem", opacity: 0.12 },
+      { emoji: "🍄", top: "50%", left: "5%", size: "1.5rem", opacity: 0.12 },
+      { emoji: "🌻", top: "80%", right: "10%", size: "1.8rem", opacity: 0.12 },
+    ],
+  },
+  desert: {
+    background: "#fff3e0",
+    decorations: [
+      { emoji: "🌵", top: "10%", left: "5%", size: "2.5rem", opacity: 0.12 },
+      { emoji: "🏜️", top: "25%", right: "10%", size: "2rem", opacity: 0.1 },
+      { emoji: "🪨", top: "45%", left: "8%", size: "1.8rem", opacity: 0.12 },
+      { emoji: "🦎", top: "60%", right: "5%", size: "1.5rem", opacity: 0.1 },
+      { emoji: "🦂", top: "35%", left: "50%", size: "1.5rem", opacity: 0.1 },
+      { emoji: "🌅", top: "70%", left: "20%", size: "2rem", opacity: 0.08 },
+    ],
+  },
+  ice: {
+    background: "#e3f2fd",
+    decorations: [
+      { emoji: "❄️", top: "5%", left: "10%", size: "1.5rem", opacity: 0.15 },
+      { emoji: "🏔️", top: "15%", right: "5%", size: "3rem", opacity: 0.1 },
+      { emoji: "🧊", top: "35%", left: "5%", size: "2rem", opacity: 0.12 },
+      { emoji: "☃️", top: "50%", right: "10%", size: "2rem", opacity: 0.1 },
+      { emoji: "❄️", top: "65%", left: "30%", size: "1.2rem", opacity: 0.15 },
+      { emoji: "⛄", top: "80%", left: "10%", size: "2rem", opacity: 0.1 },
+    ],
+  },
+  castle: {
+    background: "#f3e5f5",
+    decorations: [
+      { emoji: "🏰", top: "5%", left: "5%", size: "3rem", opacity: 0.1 },
+      { emoji: "⚔️", top: "15%", right: "10%", size: "1.8rem", opacity: 0.1 },
+      { emoji: "🛡️", top: "35%", left: "8%", size: "2rem", opacity: 0.1 },
+      { emoji: "🏴", top: "50%", right: "5%", size: "1.8rem", opacity: 0.1 },
+      { emoji: "💎", top: "65%", left: "40%", size: "1.5rem", opacity: 0.12 },
+      { emoji: "👑", top: "80%", right: "15%", size: "1.8rem", opacity: 0.1 },
+      { emoji: "🔮", top: "25%", left: "60%", size: "1.5rem", opacity: 0.1 },
+    ],
+  },
+};
+
+// ===== DAILY QUEST CONFIG =====
+const DAILY_QUEST_CONFIG = {
+  possibleTargets: [
+    { world: "numberRanch", name: "Addition Questions" },
+    { world: "subtractionCanyon", name: "Subtraction Questions" },
+    { world: "multiplicationMountain", name: "Multiplication Questions" },
+    { world: "divisionDesert", name: "Division Questions" },
+    { world: "moneyMarket", name: "Money Questions" },
+    { world: "timeTower", name: "Time Questions" },
+    { world: "fractionForest", name: "Fraction Questions" },
+    { world: "decimalDocks", name: "Decimal Questions" },
+    { world: "mathReadingTrail", name: "Reading Math Questions" },
+  ],
+  targetCounts: [5, 5], // 2 targets, 5 questions each
+  rewardXP: 50,
+  rewardStars: 1,
+};
+
+function generateDailyQuest(unlockedWorlds) {
+  // Get date string for today
+  const today = new Date().toISOString().split("T")[0];
+
+  // Filter to unlocked worlds that have question generators
+  const available = DAILY_QUEST_CONFIG.possibleTargets.filter((t) =>
+    unlockedWorlds.includes(t.world),
+  );
+
+  if (available.length === 0) return null;
+
+  // Pick up to 2 targets
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  const targets = shuffled.slice(0, 2).map((t, i) => ({
+    world: t.world,
+    name: t.name,
+    count: DAILY_QUEST_CONFIG.targetCounts[i] || 5,
+  }));
+
+  return {
+    date: today,
+    targets: targets,
+    progress: targets.map(() => 0),
+    completed: false,
+    rewardClaimed: false,
+  };
+}
+
 // ===== WORLDS =====
 const WORLDS = {
   numberRanch: {
@@ -500,7 +598,7 @@ const WORLDS = {
       return `Subtract decimals carefully.\n\nLine up the decimal points and borrow if needed.\n\nRemember: ₱1.00 = 100 centavos`;
     },
   },
-  // ===== NEW: Math Reading Trail =====
+  // ===== Math Reading Trail =====
   mathReadingTrail: {
     id: "mathReadingTrail",
     name: "Math Reading Trail",
@@ -509,6 +607,8 @@ const WORLDS = {
     description: "Read & Solve Word Problems",
     unlockXP: 500,
     difficulties: ["easy", "medium", "hard"],
+    theme: "forest", // default theme
+    hasTimer: false, // Reading Trail has no timer
     vocabulary: {
       contained: "Contained means something is inside or held within.",
       remaining: "Remaining means what is left after some are taken away.",
@@ -635,7 +735,6 @@ const WORLDS = {
       const storyIndex = this.currentStoryIndex % stories.length;
       const story = stories[storyIndex];
       const qIndex = this.currentQuestionIndex % (story.questions.length || 1);
-      // Return story context + current question
       const qData = story.questions[qIndex];
       this.currentQuestionIndex++;
       if (this.currentQuestionIndex >= story.questions.length) {
@@ -653,7 +752,6 @@ const WORLDS = {
       };
     },
     getHint: function (question) {
-      // Try to extract stored hint from the question object
       return "Read the story carefully. Look for key numbers and decide which operation to use (+, −, ×, ÷).";
     },
   },
@@ -677,6 +775,13 @@ const DIFFICULTY_TIMERS = {
   medium: 25,
   hard: 20,
 };
+
+// ===== READING MAP THEME CYCLING =====
+const READING_THEMES = ["forest", "desert", "ice", "castle"];
+
+function getReadingThemeForIndex(index) {
+  return READING_THEMES[index % READING_THEMES.length];
+}
 
 // ===== CHAIN BONUS CONFIG =====
 function getChainBonus(chain) {
