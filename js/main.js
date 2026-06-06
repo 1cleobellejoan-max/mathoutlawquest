@@ -1,9 +1,10 @@
-// Math Outlaw Quest - Game Engine (Version 3)
+// Math Outlaw Quest - Game Engine (Version 4)
 
 // ===== GAME STATE =====
 let gameState = {
   currentScreen: "start",
   selectedWorld: null,
+  // V4: Per-world difficulty (each world has its own independent setting)
   selectedDifficulty: {
     numberRanch: "easy",
     subtractionCanyon: "easy",
@@ -55,7 +56,7 @@ let gameState = {
   debugSettings: {
     timerEnabled: true,
     chainEnabled: true,
-    supportBoardOverride: null, // true=force on, false=force off, null=auto
+    supportBoardOverride: null,
     vocabHighlightsEnabled: true,
     readAloudEnabled: true,
     writingLayerEnabled: true,
@@ -63,6 +64,9 @@ let gameState = {
 
   // V3: Daily quest
   dailyQuest: null,
+
+  // V4: Notification system (structured data model)
+  notifications: [], // Array of Notification objects
 };
 
 // ===== SAVE SYSTEM =====
@@ -80,18 +84,56 @@ function loadGame() {
     if (saved) {
       const parsed = JSON.parse(saved);
       gameState = { ...gameState, ...parsed };
+
+      // Ensure per-world difficulty exists for all worlds (migration from global string or old object)
+      if (typeof gameState.selectedDifficulty === "string") {
+        // Was using global difficulty — convert back to per-world
+        const globalVal = gameState.selectedDifficulty || "easy";
+        gameState.selectedDifficulty = {};
+        for (const world of Object.keys(WORLDS)) {
+          gameState.selectedDifficulty[world] = globalVal;
+        }
+      }
+      for (const world of Object.keys(WORLDS)) {
+        if (!gameState.selectedDifficulty[world]) {
+          gameState.selectedDifficulty[world] = "easy";
+        }
+      }
+
+      // Ensure notifications array exists
+      if (!gameState.notifications) {
+        // Try to migrate from old notificationItems if present
+        if (
+          parsed.notificationItems &&
+          Array.isArray(parsed.notificationItems)
+        ) {
+          gameState.notifications = parsed.notificationItems.map((n) => ({
+            id:
+              n.id ||
+              Date.now().toString() + Math.random().toString(36).slice(2, 6),
+            type: n.type === "dailyQuest" ? "quest" : "system",
+            title: n.title || "Notification",
+            message: n.message || "",
+            xp: 0,
+            read: n.read || false,
+            timestamp: n.date
+              ? new Date(n.date + "T00:00:00").getTime()
+              : Date.now(),
+            priority: "medium",
+            autoToast: false,
+          }));
+        } else {
+          gameState.notifications = [];
+        }
+      }
+
       // Ensure nested objects exist
       for (const world of Object.keys(WORLDS)) {
         if (!gameState.worldProgress[world]) {
           gameState.worldProgress[world] = { correct: 0, total: 0 };
         }
       }
-      // Ensure per-world difficulty exists for all worlds
-      for (const world of Object.keys(WORLDS)) {
-        if (!gameState.selectedDifficulty[world]) {
-          gameState.selectedDifficulty[world] = "easy";
-        }
-      }
+
       // Ensure debug settings exist
       if (!gameState.debugSettings) {
         gameState.debugSettings = {
@@ -142,7 +184,11 @@ function generateQuestion() {
   const world = WORLDS[worldId];
   if (!world) return null;
 
-  let difficulty = gameState.selectedDifficulty[worldId] || "easy";
+  // Use per-world selectedDifficulty
+  const difficulty = gameState.selectedDifficulty[worldId] || "easy";
+  console.log(
+    `[DEBUG] generateQuestion: world=${worldId}, difficulty=${difficulty}`,
+  );
 
   if (worldId === "multiplicationMountain") {
     gameState.currentQuestion = world.generateQuestion(
@@ -161,7 +207,6 @@ function generateQuestion() {
 
 // ===== CHAIN SYSTEM =====
 function updateChain(isCorrect) {
-  // Check debug override for chain
   if (!gameState.debugSettings.chainEnabled) {
     return;
   }
@@ -198,10 +243,8 @@ function updateChainDisplay() {
 
 // ===== TIMER SYSTEM =====
 function startTimer(difficulty) {
-  // Check if timer should run (Reading Trail has no timer, debug may disable it)
   const world = WORLDS[gameState.selectedWorld];
   if (world && world.hasTimer === false) {
-    // Reading Trail: hide timer display, no timer
     const timerContainer = document.getElementById("timerContainer");
     if (timerContainer) timerContainer.style.display = "none";
     return;
@@ -212,7 +255,6 @@ function startTimer(difficulty) {
     return;
   }
 
-  // Show timer container
   const timerContainer = document.getElementById("timerContainer");
   if (timerContainer) timerContainer.style.display = "flex";
 
@@ -235,7 +277,6 @@ function startTimer(difficulty) {
     const pct = (gameState.timeRemaining / timerDuration) * 100;
     if (timerFill) timerFill.style.width = `${pct}%`;
 
-    // Warning animation when low
     if (timerEl) {
       if (gameState.timeRemaining <= 5) {
         timerEl.classList.add("timer-warning");
@@ -278,10 +319,8 @@ function handleTimeout() {
   if (answerInput) answerInput.disabled = true;
   if (submitBtn) submitBtn.disabled = true;
 
-  // Chain reset
   updateChain(false);
 
-  // Retry option
   const retryContainer = document.getElementById("retryContainer");
   if (retryContainer) {
     gameState.retryActive = true;
@@ -298,7 +337,6 @@ function retryQuestion() {
   const retryContainer = document.getElementById("retryContainer");
   if (retryContainer) retryContainer.className = "retry-container";
   gameState.retryActive = false;
-  // Restart same question with fresh timer
   startNewQuestion(true);
 }
 
@@ -329,21 +367,54 @@ function checkAnswer(playerAnswer) {
   }
 
   if (isCorrect) {
-    // Stop timer
     stopTimer();
     const retryContainer = document.getElementById("retryContainer");
     if (retryContainer) retryContainer.className = "retry-container";
 
-    // Calculate XP with time bonus
+    // Calculate XP
     const difficulty = gameState.currentQuestion.difficulty;
     const timerDuration = DIFFICULTY_TIMERS[difficulty] || 30;
     const timeBonus = gameState.timeRemaining > timerDuration / 2 ? 5 : 0;
-
-    // Chain bonus
     updateChain(true);
     const chainBonus = gameState.chainXpBonus;
+    const baseXp = 10;
+    const totalXpEarned = baseXp + timeBonus + chainBonus;
 
-    const totalXpEarned = 10 + timeBonus + chainBonus;
+    // Generate XP toast notifications
+    if (baseXp > 0) {
+      showNotification(`+${baseXp} XP Earned!`);
+      notificationManager.add({
+        type: "xp",
+        title: "XP Reward",
+        message: `You earned ${baseXp} XP for a correct answer`,
+        xp: baseXp,
+        priority: "medium",
+        autoToast: false,
+      });
+    }
+    if (timeBonus > 0 && gameState.debugSettings.timerEnabled) {
+      showNotification(`⚡ Time Bonus +${timeBonus} XP!`);
+      notificationManager.add({
+        type: "xp",
+        title: "Time Bonus",
+        message: `Quick answer bonus: +${timeBonus} XP`,
+        xp: timeBonus,
+        priority: "medium",
+        autoToast: false,
+      });
+    }
+    if (chainBonus > 0 && gameState.debugSettings.chainEnabled) {
+      showNotification(`🔥 Chain Bonus +${chainBonus} XP!`);
+      notificationManager.add({
+        type: "xp",
+        title: "Chain Bonus",
+        message: `Chain x${gameState.chain} bonus: +${chainBonus} XP`,
+        xp: chainBonus,
+        priority: "medium",
+        autoToast: false,
+      });
+    }
+
     gameState.xp += totalXpEarned;
     gameState.totalCorrect++;
     gameState.totalQuestions++;
@@ -355,12 +426,19 @@ function checkAnswer(playerAnswer) {
       gameState.worldProgress[worldId].total++;
     }
 
-    // Update daily quest progress
     updateDailyQuestProgress(worldId);
 
     if (gameState.totalCorrect % 10 === 0) {
       gameState.stars++;
       showNotification("⭐ You earned a star! ⭐");
+      notificationManager.add({
+        type: "achievement",
+        title: "⭐ Star Earned",
+        message: `You earned your ${gameState.stars}th star!`,
+        xp: 0,
+        priority: "high",
+        autoToast: false,
+      });
     }
 
     checkUnlocks();
@@ -424,11 +502,9 @@ function checkAnswer(playerAnswer) {
 function showHelp() {
   if (!gameState.currentQuestion) return;
 
-  // Show hint immediately (no need for 2 wrong attempts)
   const question = gameState.currentQuestion;
   const world = WORLDS[question.world];
 
-  // Try to get hint from the question object first, then from world
   let hintText = question.hint || null;
   if (!hintText && world && world.getHint) {
     hintText = world.getHint(question.question || question);
@@ -440,7 +516,6 @@ function showHelp() {
 
   const hintBox = document.getElementById("hintBox");
   if (hintBox) {
-    // Use the question's hint if available (for reading trail), otherwise use world hint
     const hint =
       question.hint ||
       (world && world.getHint
@@ -451,7 +526,6 @@ function showHelp() {
     gameState.hintsUsed++;
   }
 
-  // Also show feedback that help was given
   const feedback = document.getElementById("feedback");
   if (feedback && !feedback.textContent) {
     feedback.textContent = "💡 Try using the hint above!";
@@ -481,7 +555,6 @@ function showScreen(screenId) {
     updateStatusBar();
   }
 
-  // Update debug label visibility
   updateDebugLabel();
 }
 
@@ -527,9 +600,9 @@ function renderMap() {
                 </div>
                 <div class="world-pct">${pct}%</div>
                 <div class="difficulty-selector">
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "easy" ? "active" : ""}" onclick="selectDifficulty('easy', '${worldId}', event)">Easy</button>
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "medium" ? "active" : ""}" onclick="selectDifficulty('medium', '${worldId}', event)">Medium</button>
-                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "hard" ? "active" : ""}" onclick="selectDifficulty('hard', '${worldId}', event)">Hard</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "easy" ? "active" : ""}" onclick="selectDifficulty('easy', '${worldId}', event)">${gameState.selectedDifficulty[worldId] === "easy" ? "✓ " : ""}Easy</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "medium" ? "active" : ""}" onclick="selectDifficulty('medium', '${worldId}', event)">${gameState.selectedDifficulty[worldId] === "medium" ? "✓ " : ""}Medium</button>
+                    <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "hard" ? "active" : ""}" onclick="selectDifficulty('hard', '${worldId}', event)">${gameState.selectedDifficulty[worldId] === "hard" ? "✓ " : ""}Hard</button>
                 </div>
                 <button class="play-btn" onclick="playWorld('${worldId}')" style="background: ${world.color}">▶ Play</button>
             `
@@ -544,24 +617,42 @@ function renderMap() {
   mapContainer.appendChild(worldGrid);
 }
 
+// ===== DIFFICULTY SELECTION (PER-WORLD) =====
 function selectDifficulty(diff, worldId, event) {
   if (event) {
     event.stopPropagation();
     event.preventDefault();
   }
+
+  console.log(`[DEBUG] Difficulty pressed: ${diff} for world: ${worldId}`);
+  console.log(
+    `[DEBUG] Previous difficulty for ${worldId}: ${gameState.selectedDifficulty[worldId]}`,
+  );
+
+  // Set difficulty for this specific world only
   gameState.selectedDifficulty[worldId] = diff;
-  gameState.selectedWorld = worldId;
+
+  console.log(
+    `[DEBUG] Current difficulty state:`,
+    JSON.stringify(gameState.selectedDifficulty),
+  );
+
+  // Persist
+  saveGame();
+
+  // Re-render map to update button highlights
   renderMap();
 }
 
 function playWorld(worldId) {
+  const diff = gameState.selectedDifficulty[worldId] || "easy";
+  console.log(`[DEBUG] playWorld: world=${worldId}, difficulty=${diff}`);
+
   gameState.selectedWorld = worldId;
   gameState.questionCount = 0;
-  // Reset chain when switching worlds
   gameState.chain = 0;
   updateChainDisplay();
 
-  // Apply reading theme if it's the reading trail
   const world = WORLDS[worldId];
   if (worldId === "mathReadingTrail") {
     const themeIndex = gameState.questionCount;
@@ -628,7 +719,6 @@ function clearReadingTheme() {
 }
 
 function adjustColor(hex, amount) {
-  // Simple color darken/lighten
   if (!hex) return hex;
   hex = hex.replace("#", "");
   const num = parseInt(hex, 16);
@@ -660,19 +750,16 @@ function startNewQuestion(isRetry) {
   submitBtn.disabled = false;
   if (retryContainer) retryContainer.className = "retry-container";
 
-  // Only clear work area for each new question
   clearCanvas();
 
   answerInput.focus();
 
-  // Show world context
   let html = `
         <div class="question-header" style="color: ${world.color}">
             ${world.emoji} ${world.name} • ${capitalize(question.difficulty)}
         </div>
     `;
 
-  // For reading trail, show story context with vocabulary
   if (question.world === "mathReadingTrail" && question.storyText) {
     html += `<div class="story-text">${question.storyText}</div>`;
     html += `<div class="question-text">${question.question}</div>`;
@@ -682,7 +769,6 @@ function startNewQuestion(isRetry) {
 
   questionContainer.innerHTML = html;
 
-  // Attach vocabulary click handlers (if vocab highlights enabled)
   if (gameState.debugSettings.vocabHighlightsEnabled !== false) {
     document.querySelectorAll(".vocab-word").forEach((el) => {
       el.addEventListener("click", function (e) {
@@ -700,7 +786,6 @@ function startNewQuestion(isRetry) {
     });
   }
 
-  // Handle fraction answers
   if (typeof question.answer === "string" && question.answer.includes("/")) {
     const [num, den] = question.answer.split("/");
     answerInput.placeholder = `Type answer (e.g., ${num}/${den})`;
@@ -710,16 +795,13 @@ function startNewQuestion(isRetry) {
     answerInput.placeholder = "Type your answer...";
   }
 
-  // Show support board if available
   renderSupportBoard(question.world);
 
-  // Show read-aloud button for reading trail (if enabled)
   const worldHasReadAloud =
     question.world === "mathReadingTrail" &&
     gameState.debugSettings.readAloudEnabled !== false;
   const readAloudContainer = document.getElementById("readAloudContainer");
   if (readAloudContainer) {
-    // Reading Trail shows read-aloud prompt as text guidance, no recording buttons
     if (worldHasReadAloud) {
       readAloudContainer.className = "read-aloud-container visible";
       readAloudContainer.innerHTML = `<span style="color: white; font-size: 0.85rem; opacity: 0.8;">📖 Read the story aloud naturally</span>`;
@@ -729,17 +811,16 @@ function startNewQuestion(isRetry) {
     }
   }
 
-  // Start timer (won't start for Reading Trail)
+  // Use the per-world selectedDifficulty for the timer
+  const worldId = question.world || (question.difficulty ? null : null);
   const difficulty =
-    question.difficulty ||
     gameState.selectedDifficulty[question.world] ||
+    question.difficulty ||
     "easy";
   startTimer(difficulty);
 
-  // Update chain display
   updateChainDisplay();
 
-  // Update work area visibility based on debug setting
   setDrawingLayerEnabled(gameState.debugSettings.writingLayerEnabled !== false);
 }
 
@@ -773,10 +854,8 @@ function showHint(question) {
 
 // ===== VOCABULARY POPUP =====
 function showVocabPopup(word, definition) {
-  // Check if vocab highlights are disabled
   if (gameState.debugSettings.vocabHighlightsEnabled === false) return;
 
-  // Remove existing popup
   const existing = document.getElementById("vocabPopup");
   if (existing) existing.remove();
 
@@ -810,7 +889,6 @@ function renderSupportBoard(worldId) {
     return;
   }
 
-  // Check debug override
   let visibility;
   if (gameState.debugSettings.supportBoardOverride === true) {
     visibility = 1;
@@ -848,7 +926,6 @@ function renderSupportBoard(worldId) {
     </details>
   `;
 
-  // Support toggle for progressive fade
   const details = supportContainer.querySelector(".support-details");
   if (details) {
     details.addEventListener("toggle", function () {
@@ -875,19 +952,46 @@ function getSupportLevel(worldId) {
 function initDailyQuest() {
   const today = new Date().toISOString().split("T")[0];
 
-  // If we already have a quest for today, use it
   if (gameState.dailyQuest && gameState.dailyQuest.date === today) {
-    updateDailyQuestBanner();
+    addDailyQuestNotification();
+    updateNotifBadge();
     return;
   }
 
-  // Generate new quest for today
   const newQuest = generateDailyQuest(gameState.unlockedWorlds);
   if (newQuest) {
     gameState.dailyQuest = newQuest;
     saveGame();
-    updateDailyQuestBanner();
+    setTimeout(() => {
+      showNotification("📅 Daily Quest Available!");
+    }, 1000);
+    addDailyQuestNotification();
+    updateNotifBadge();
   }
+}
+
+function addDailyQuestNotification() {
+  if (!gameState.dailyQuest) return;
+
+  // Remove existing daily quest notification to avoid duplicates
+  notificationManager.removeByType("quest");
+
+  const quest = gameState.dailyQuest;
+  let statusMsg = "In Progress";
+  if (quest.completed && !quest.rewardClaimed) {
+    statusMsg = "✅ Complete! Claim your reward!";
+  } else if (quest.rewardClaimed) {
+    statusMsg = "🎁 Reward Claimed";
+  }
+
+  notificationManager.add({
+    type: "quest",
+    title: "📅 Daily Quest",
+    message: `${quest.targets.map((t, i) => `${t.name}: ${quest.progress[i]}/${t.count}`).join(" • ")} — ${statusMsg}`,
+    xp: quest.rewardClaimed ? DAILY_QUEST_CONFIG.rewardXP : 0,
+    priority: "high",
+    autoToast: false,
+  });
 }
 
 function updateDailyQuestProgress(worldId) {
@@ -904,53 +1008,22 @@ function updateDailyQuestProgress(worldId) {
   });
 
   if (updated) {
-    // Check if all targets completed
     const allDone = quest.targets.every((t, i) => quest.progress[i] >= t.count);
     if (allDone && !quest.completed) {
       quest.completed = true;
       showNotification("🎉 Daily Quest Complete! Claim your reward!");
+      notificationManager.add({
+        type: "quest",
+        title: "🎯 Quest Complete",
+        message: "You've completed today's daily quest! Claim your reward!",
+        xp: DAILY_QUEST_CONFIG.rewardXP,
+        priority: "high",
+        autoToast: false,
+      });
     }
     saveGame();
-    updateDailyQuestBanner();
-  }
-}
-
-function updateDailyQuestBanner() {
-  const banner = document.getElementById("dailyQuestBanner");
-  const targetsEl = document.getElementById("dailyQuestTargets");
-  const claimBtn = document.getElementById("dailyQuestClaimBtn");
-
-  if (!banner || !gameState.dailyQuest) {
-    if (banner) banner.style.display = "none";
-    return;
-  }
-
-  const quest = gameState.dailyQuest;
-
-  // Check if already claimed
-  if (quest.rewardClaimed) {
-    banner.style.display = "none";
-    return;
-  }
-
-  banner.style.display = "block";
-
-  // Build target list
-  let html = "";
-  quest.targets.forEach((target, i) => {
-    const done = quest.progress[i] >= target.count;
-    html += `<div class="quest-item">
-      <span class="quest-check">${done ? "✅" : "⬜"}</span>
-      <span>${target.count} ${target.name} ${done ? "✓" : `(${quest.progress[i]}/${target.count})`}</span>
-    </div>`;
-  });
-  targetsEl.innerHTML = html;
-
-  // Show claim button if completed
-  if (quest.completed && !quest.rewardClaimed) {
-    claimBtn.style.display = "inline-block";
-  } else {
-    claimBtn.style.display = "none";
+    addDailyQuestNotification();
+    updateNotifBadge();
   }
 }
 
@@ -967,10 +1040,273 @@ function claimDailyQuestReward() {
   gameState.xp += DAILY_QUEST_CONFIG.rewardXP;
 
   saveGame();
-  updateDailyQuestBanner();
+  updateNotifBadge();
   updateStatusBar();
 
   showNotification(`🎁 Claimed! +${DAILY_QUEST_CONFIG.rewardXP} XP + ⭐ Star`);
+
+  notificationManager.add({
+    type: "reward",
+    title: "🎁 Quest Reward Claimed",
+    message: `You received +${DAILY_QUEST_CONFIG.rewardXP} XP and ⭐ Star`,
+    xp: DAILY_QUEST_CONFIG.rewardXP,
+    priority: "high",
+    autoToast: false,
+  });
+
+  addDailyQuestNotification();
+}
+
+// ===== NOTIFICATION MANAGER (Central Controller) =====
+const notificationManager = {
+  _generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  },
+
+  add({
+    type = "system",
+    title = "Notification",
+    message = "",
+    xp = 0,
+    priority = "medium",
+    autoToast = true,
+  }) {
+    const notification = {
+      id: this._generateId(),
+      type: type, // "xp" | "quest" | "reward" | "system" | "achievement"
+      title: title,
+      message: message,
+      xp: xp,
+      read: false,
+      timestamp: Date.now(),
+      priority: priority, // "low" | "medium" | "high"
+      autoToast: autoToast,
+    };
+
+    gameState.notifications.unshift(notification);
+
+    // Limit to 50 notifications
+    if (gameState.notifications.length > 50) {
+      gameState.notifications = gameState.notifications.slice(0, 50);
+    }
+
+    saveGame();
+    updateNotifBadge();
+
+    // Show toast if autoToast is true
+    if (autoToast) {
+      showNotification(`${title}: ${message}`);
+    }
+
+    return notification;
+  },
+
+  getAll() {
+    // Return sorted by timestamp descending (newest first)
+    return [...gameState.notifications].sort(
+      (a, b) => b.timestamp - a.timestamp,
+    );
+  },
+
+  getUnreadCount() {
+    return gameState.notifications.filter((n) => !n.read).length;
+  },
+
+  markAsRead(id) {
+    const notif = gameState.notifications.find((n) => n.id === id);
+    if (notif) {
+      notif.read = true;
+      saveGame();
+      updateNotifBadge();
+    }
+  },
+
+  markAllRead() {
+    gameState.notifications.forEach((n) => {
+      n.read = true;
+    });
+    saveGame();
+    updateNotifBadge();
+  },
+
+  clearNotification(id) {
+    gameState.notifications = gameState.notifications.filter(
+      (n) => n.id !== id,
+    );
+    saveGame();
+    updateNotifBadge();
+  },
+
+  removeByType(type) {
+    gameState.notifications = gameState.notifications.filter(
+      (n) => n.type !== type,
+    );
+    saveGame();
+    updateNotifBadge();
+  },
+
+  getGrouped() {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const todayMs = new Date(todayStr + "T00:00:00").getTime();
+
+    const groups = {
+      today: [],
+      quests: [],
+      rewards: [],
+      system: [],
+    };
+
+    const all = this.getAll();
+    all.forEach((n) => {
+      if (n.type === "quest") {
+        groups.quests.push(n);
+      } else if (n.type === "reward") {
+        groups.rewards.push(n);
+      } else if (n.type === "system") {
+        groups.system.push(n);
+      } else {
+        // xp, achievement, or others — put in "today" if recent
+        if (n.timestamp >= todayMs) {
+          groups.today.push(n);
+        } else {
+          groups.system.push(n);
+        }
+      }
+    });
+
+    // Sort within groups by timestamp desc (newest first)
+    Object.keys(groups).forEach((key) => {
+      groups[key].sort((a, b) => b.timestamp - a.timestamp);
+    });
+
+    return groups;
+  },
+};
+
+// ===== NOTIFICATION PANEL SYSTEM =====
+function toggleNotificationPanel() {
+  const panel = document.getElementById("notificationPanel");
+  if (!panel) return;
+
+  const isVisible = panel.style.display !== "none";
+  panel.style.display = isVisible ? "none" : "block";
+
+  if (!isVisible) {
+    renderNotificationPanel();
+    notificationManager.markAllRead();
+  }
+}
+
+function renderNotificationPanel() {
+  const content = document.getElementById("notifPanelContent");
+  if (!content) return;
+
+  const groups = notificationManager.getGrouped();
+
+  // Check if everything is empty
+  const allEmpty = Object.values(groups).every((arr) => arr.length === 0);
+  if (allEmpty) {
+    content.innerHTML = `<div class="notif-empty">No notifications yet.</div>`;
+    return;
+  }
+
+  let html = "";
+
+  // Section: Today
+  if (groups.today.length > 0) {
+    html += `<div class="notif-section-title">📌 Today</div>`;
+    groups.today.forEach((item) => {
+      html += buildNotifItemHTML(item);
+    });
+  }
+
+  // Section: Quests
+  if (groups.quests.length > 0) {
+    html += `<div class="notif-section-title">🎯 Quests</div>`;
+    groups.quests.forEach((item) => {
+      html += buildNotifItemHTML(item);
+    });
+  }
+
+  // Section: Rewards
+  if (groups.rewards.length > 0) {
+    html += `<div class="notif-section-title">🏆 Rewards</div>`;
+    groups.rewards.forEach((item) => {
+      html += buildNotifItemHTML(item);
+    });
+  }
+
+  // Section: System
+  if (groups.system.length > 0) {
+    html += `<div class="notif-section-title">⚙ System</div>`;
+    groups.system.forEach((item) => {
+      html += buildNotifItemHTML(item);
+    });
+  }
+
+  content.innerHTML = html;
+}
+
+function buildNotifItemHTML(item) {
+  const xpText =
+    item.xp > 0 ? `<span class="notif-xp">+${item.xp} XP</span>` : "";
+  const typeIcon =
+    {
+      xp: "⭐",
+      quest: "🎯",
+      reward: "🎁",
+      system: "⚙",
+      achievement: "🏆",
+    }[item.type] || "📌";
+
+  const canClaim =
+    item.type === "quest" &&
+    gameState.dailyQuest &&
+    gameState.dailyQuest.completed &&
+    !gameState.dailyQuest.rewardClaimed;
+
+  return `
+    <div class="notif-item ${item.read ? "notif-item-read" : ""}">
+      <div class="notif-item-header">
+        <span class="notif-item-icon">${typeIcon}</span>
+        <span class="notif-item-title">${item.title}</span>
+        ${xpText}
+      </div>
+      <div class="notif-item-msg">${item.message}</div>
+      <div class="notif-item-actions">
+        ${canClaim ? `<button class="notif-action-btn" onclick="claimDailyQuestReward(); toggleNotificationPanel();">🎁 Claim Reward</button>` : ""}
+        <button class="notif-action-btn notif-action-dismiss" onclick="notificationManager.clearNotification('${item.id}'); renderNotificationPanel();">Dismiss</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById("notifBadge");
+  if (!badge) return;
+
+  const count = notificationManager.getUnreadCount();
+  if (count > 0) {
+    badge.style.display = "flex";
+    badge.textContent = count > 9 ? "9+" : count;
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+// ===== TOAST NOTIFICATION SYSTEM =====
+function showNotification(message) {
+  const container = document.getElementById("notificationContainer");
+  const notification = document.createElement("div");
+  notification.className = "notification";
+  notification.textContent = message;
+  container.appendChild(notification);
+
+  setTimeout(() => {
+    notification.classList.add("fade-out");
+    setTimeout(() => notification.remove(), 500);
+  }, 3000);
 }
 
 // ===== FEEDBACK =====
@@ -1031,7 +1367,6 @@ function renderDashboard() {
   const dashboardContent = document.getElementById("dashboardContent");
   dashboardContent.innerHTML = "";
 
-  // Stats summary
   const statsCard = document.createElement("div");
   statsCard.className = "stats-card";
   statsCard.innerHTML = `
@@ -1067,7 +1402,6 @@ function renderDashboard() {
     `;
   dashboardContent.appendChild(statsCard);
 
-  // World progress
   const worldProgressCard = document.createElement("div");
   worldProgressCard.className = "stats-card";
   worldProgressCard.innerHTML = "<h3>🗺️ World Progress</h3>";
@@ -1098,7 +1432,6 @@ function renderDashboard() {
   worldProgressCard.appendChild(progList);
   dashboardContent.appendChild(worldProgressCard);
 
-  // Daily Quest Status
   if (gameState.dailyQuest && !gameState.dailyQuest.rewardClaimed) {
     const questCard = document.createElement("div");
     questCard.className = "stats-card";
@@ -1115,13 +1448,12 @@ function renderDashboard() {
     });
     questHtml += `</div>`;
     if (quest.completed && !quest.rewardClaimed) {
-      questHtml += `<button class="debug-btn" style="margin-top:10px;" onclick="claimDailyQuestReward()">🎁 Claim Reward (⭐ + ${DAILY_QUEST_CONFIG.rewardXP} XP)</button>`;
+      questHtml += `<button class="debug-btn" style="margin-top:10px;" onclick="claimDailyQuestReward(); renderDashboard();">🎁 Claim Reward (⭐ + ${DAILY_QUEST_CONFIG.rewardXP} XP)</button>`;
     }
     questCard.innerHTML = questHtml;
     dashboardContent.appendChild(questCard);
   }
 
-  // Tips & Debug
   const tipsCard = document.createElement("div");
   tipsCard.className = "stats-card";
   tipsCard.innerHTML = `
@@ -1157,7 +1489,6 @@ function toggleDebugPanel() {
   panel.style.display = isVisible ? "none" : "flex";
 
   if (!isVisible) {
-    // Enable debug mode when opening panel
     gameState.debugMode = true;
     updateDebugLabel();
   }
@@ -1182,6 +1513,14 @@ function debugAddXP(amount) {
   saveGame();
   updateStatusBar();
   showNotification(`⭐ +${amount} XP added`);
+  notificationManager.add({
+    type: "xp",
+    title: "Debug XP Added",
+    message: `+${amount} XP (debug)`,
+    xp: amount,
+    priority: "low",
+    autoToast: false,
+  });
   updateDebugLabel();
 }
 
@@ -1210,7 +1549,6 @@ function debugSupportForce(forceOn) {
   saveGame();
   showNotification(`📋 Support Board ${forceOn ? "Forced ON" : "Forced OFF"}`);
   updateDebugLabel();
-  // Re-render support board if on game screen
   if (gameState.currentScreen === "game" && gameState.selectedWorld) {
     renderSupportBoard(gameState.selectedWorld);
   }
@@ -1297,20 +1635,6 @@ function debugDrawToggle(enabled) {
   updateDebugLabel();
 }
 
-// ===== NOTIFICATION SYSTEM =====
-function showNotification(message) {
-  const container = document.getElementById("notificationContainer");
-  const notification = document.createElement("div");
-  notification.className = "notification";
-  notification.textContent = message;
-  container.appendChild(notification);
-
-  setTimeout(() => {
-    notification.classList.add("fade-out");
-    setTimeout(() => notification.remove(), 500);
-  }, 3000);
-}
-
 // ===== STATUS BAR =====
 function updateStatusBar() {
   document.getElementById("xpDisplay").textContent = `⭐ ${gameState.xp} XP`;
@@ -1333,13 +1657,11 @@ document.addEventListener("keydown", function (e) {
       submitAnswer();
     }
   }
-  // Escape closes vocabulary popup
   if (e.key === "Escape") {
     closeVocabPopup();
   }
 });
 
-// Close vocab popup when clicking outside
 document.addEventListener("click", function (e) {
   const popup = document.getElementById("vocabPopup");
   if (
@@ -1350,13 +1672,26 @@ document.addEventListener("click", function (e) {
   }
 });
 
+document.addEventListener("click", function (e) {
+  const panel = document.getElementById("notificationPanel");
+  const bellBtn = document.getElementById("notificationBell");
+  if (
+    panel &&
+    panel.style.display !== "none" &&
+    !panel.contains(e.target) &&
+    !bellBtn.contains(e.target)
+  ) {
+    panel.style.display = "none";
+  }
+});
+
 // ===== INITIALIZATION =====
 function initGame() {
   loadGame();
   checkUnlocks();
   initDailyQuest();
+  updateNotifBadge();
   showScreen("start");
 }
 
-// Start game when page loads
 document.addEventListener("DOMContentLoaded", initGame);
