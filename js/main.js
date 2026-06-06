@@ -1,4 +1,4 @@
-// Math Outlaw Quest - Game Engine (Version 4)
+// Math Outlaw Quest - Game Engine (Clean Version)
 
 // ===== GAME STATE =====
 let gameState = {
@@ -17,7 +17,6 @@ let gameState = {
     mathReadingTrail: "easy",
   },
   currentQuestion: null,
-  xp: 0,
   totalCorrect: 0,
   totalQuestions: 0,
   hintsUsed: 0,
@@ -39,11 +38,6 @@ let gameState = {
   questionCount: 0,
   wrongAttempts: 0,
 
-  // V2: Chain system
-  chain: 0,
-  bestChain: 0,
-  chainXpBonus: 0,
-
   // V2: Timer system
   timeRemaining: 0,
   timerInterval: null,
@@ -55,7 +49,6 @@ let gameState = {
   debugMode: false,
   debugSettings: {
     timerEnabled: true,
-    chainEnabled: true,
     supportBoardOverride: null,
     vocabHighlightsEnabled: true,
     readAloudEnabled: true,
@@ -114,7 +107,6 @@ function loadGame() {
             type: n.type === "dailyQuest" ? "quest" : "system",
             title: n.title || "Notification",
             message: n.message || "",
-            xp: 0,
             read: n.read || false,
             timestamp: n.date
               ? new Date(n.date + "T00:00:00").getTime()
@@ -138,7 +130,6 @@ function loadGame() {
       if (!gameState.debugSettings) {
         gameState.debugSettings = {
           timerEnabled: true,
-          chainEnabled: true,
           supportBoardOverride: null,
           vocabHighlightsEnabled: true,
           readAloudEnabled: true,
@@ -163,19 +154,8 @@ function resetGame() {
 
 // ===== WORLD UNLOCKING =====
 function checkUnlocks() {
-  const xp = gameState.xp;
-  const newUnlocks = [];
-  for (const [worldId, world] of Object.entries(WORLDS)) {
-    if (!gameState.unlockedWorlds.includes(worldId) && xp >= world.unlockXP) {
-      gameState.unlockedWorlds.push(worldId);
-      newUnlocks.push(world.name);
-    }
-  }
-  if (newUnlocks.length > 0) {
-    setTimeout(() => {
-      showNotification(`🎉 New world unlocked: ${newUnlocks.join(", ")}`);
-    }, 500);
-  }
+  // Worlds are all unlocked by default now (XP system removed)
+  // Keep function as no-op for backwards compatibility
 }
 
 // ===== QUESTION GENERATION =====
@@ -203,42 +183,6 @@ function generateQuestion() {
   gameState.currentQuestion.id = Date.now();
   gameState.wrongAttempts = 0;
   return gameState.currentQuestion;
-}
-
-// ===== CHAIN SYSTEM =====
-function updateChain(isCorrect) {
-  if (!gameState.debugSettings.chainEnabled) {
-    return;
-  }
-
-  if (isCorrect) {
-    gameState.chain++;
-    if (gameState.chain > gameState.bestChain) {
-      gameState.bestChain = gameState.chain;
-    }
-    gameState.chainXpBonus = getChainBonus(gameState.chain);
-  } else {
-    if (gameState.chain >= 3) {
-      showNotification("💔 Chain Broken! Try Again!");
-    }
-    gameState.chain = 0;
-    gameState.chainXpBonus = 0;
-  }
-  updateChainDisplay();
-}
-
-function updateChainDisplay() {
-  const chainEl = document.getElementById("chainDisplay");
-  if (!chainEl) return;
-  if (gameState.chain >= 3) {
-    const emoji = getChainEmoji(gameState.chain);
-    const bonus = getChainBonus(gameState.chain);
-    chainEl.innerHTML = `🔥 Chain x${gameState.chain} ${emoji} <span class="chain-bonus">+${bonus} XP bonus</span>`;
-    chainEl.className = "chain-display visible";
-  } else {
-    chainEl.className = "chain-display";
-    chainEl.innerHTML = "";
-  }
 }
 
 // ===== TIMER SYSTEM =====
@@ -319,8 +263,6 @@ function handleTimeout() {
   if (answerInput) answerInput.disabled = true;
   if (submitBtn) submitBtn.disabled = true;
 
-  updateChain(false);
-
   const retryContainer = document.getElementById("retryContainer");
   if (retryContainer) {
     gameState.retryActive = true;
@@ -344,8 +286,6 @@ function skipQuestion() {
   const retryContainer = document.getElementById("retryContainer");
   if (retryContainer) retryContainer.className = "retry-container";
   gameState.retryActive = false;
-  gameState.chain = 0;
-  updateChainDisplay();
   startNewQuestion();
 }
 
@@ -371,51 +311,6 @@ function checkAnswer(playerAnswer) {
     const retryContainer = document.getElementById("retryContainer");
     if (retryContainer) retryContainer.className = "retry-container";
 
-    // Calculate XP
-    const difficulty = gameState.currentQuestion.difficulty;
-    const timerDuration = DIFFICULTY_TIMERS[difficulty] || 30;
-    const timeBonus = gameState.timeRemaining > timerDuration / 2 ? 5 : 0;
-    updateChain(true);
-    const chainBonus = gameState.chainXpBonus;
-    const baseXp = 10;
-    const totalXpEarned = baseXp + timeBonus + chainBonus;
-
-    // Generate XP toast notifications
-    if (baseXp > 0) {
-      showNotification(`+${baseXp} XP Earned!`);
-      notificationManager.add({
-        type: "xp",
-        title: "XP Reward",
-        message: `You earned ${baseXp} XP for a correct answer`,
-        xp: baseXp,
-        priority: "medium",
-        autoToast: false,
-      });
-    }
-    if (timeBonus > 0 && gameState.debugSettings.timerEnabled) {
-      showNotification(`⚡ Time Bonus +${timeBonus} XP!`);
-      notificationManager.add({
-        type: "xp",
-        title: "Time Bonus",
-        message: `Quick answer bonus: +${timeBonus} XP`,
-        xp: timeBonus,
-        priority: "medium",
-        autoToast: false,
-      });
-    }
-    if (chainBonus > 0 && gameState.debugSettings.chainEnabled) {
-      showNotification(`🔥 Chain Bonus +${chainBonus} XP!`);
-      notificationManager.add({
-        type: "xp",
-        title: "Chain Bonus",
-        message: `Chain x${gameState.chain} bonus: +${chainBonus} XP`,
-        xp: chainBonus,
-        priority: "medium",
-        autoToast: false,
-      });
-    }
-
-    gameState.xp += totalXpEarned;
     gameState.totalCorrect++;
     gameState.totalQuestions++;
     gameState.questionCount++;
@@ -435,23 +330,16 @@ function checkAnswer(playerAnswer) {
         type: "achievement",
         title: "⭐ Star Earned",
         message: `You earned your ${gameState.stars}th star!`,
-        xp: 0,
         priority: "high",
         autoToast: false,
       });
     }
 
-    checkUnlocks();
     saveGame();
 
     const feedback = document.getElementById("feedback");
     feedback.className = "feedback correct";
-    let bonusText = "";
-    if (timeBonus > 0 && gameState.debugSettings.timerEnabled)
-      bonusText += ` ⚡+${timeBonus}`;
-    if (chainBonus > 0 && gameState.debugSettings.chainEnabled)
-      bonusText += ` 🔗+${chainBonus}`;
-    feedback.textContent = `✅ Correct! +10${bonusText} XP`;
+    feedback.textContent = "✅ Correct!";
 
     const answerInput = document.getElementById("answerInput");
     const submitBtn = document.getElementById("submitBtn");
@@ -546,13 +434,10 @@ function showScreen(screenId) {
 
   if (screenId === "map") {
     renderMap();
-    updateStatusBar();
   } else if (screenId === "game") {
     startNewQuestion();
-    updateStatusBar();
   } else if (screenId === "dashboard") {
     renderDashboard();
-    updateStatusBar();
   }
 
   updateDebugLabel();
@@ -564,14 +449,6 @@ function renderMap() {
   mapContainer.innerHTML = "";
 
   const worldKeys = Object.keys(WORLDS);
-
-  const xpBar = document.createElement("div");
-  xpBar.className = "xp-bar";
-  xpBar.innerHTML = `
-        <div class="xp-bar-inner" style="width: ${Math.min(gameState.xp / 20, 100)}%"></div>
-        <span class="xp-bar-text">XP: ${gameState.xp}</span>
-    `;
-  mapContainer.appendChild(xpBar);
 
   const worldGrid = document.createElement("div");
   worldGrid.className = "world-grid";
@@ -595,10 +472,6 @@ function renderMap() {
             ${
               isUnlocked
                 ? `
-                <div class="world-progress-bar">
-                    <div class="world-progress-fill" style="width: ${pct}%; background: ${world.color}"></div>
-                </div>
-                <div class="world-pct">${pct}%</div>
                 <div class="difficulty-selector">
                     <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "easy" ? "active" : ""}" onclick="selectDifficulty('easy', '${worldId}', event)">${gameState.selectedDifficulty[worldId] === "easy" ? "✓ " : ""}Easy</button>
                     <button class="diff-btn ${gameState.selectedDifficulty[worldId] === "medium" ? "active" : ""}" onclick="selectDifficulty('medium', '${worldId}', event)">${gameState.selectedDifficulty[worldId] === "medium" ? "✓ " : ""}Medium</button>
@@ -607,7 +480,7 @@ function renderMap() {
                 <button class="play-btn" onclick="playWorld('${worldId}')" style="background: ${world.color}">▶ Play</button>
             `
                 : `
-                <div class="world-lock-info">Need ${world.unlockXP} XP to unlock</div>
+                <button class="play-btn" onclick="playWorld('${worldId}')" style="background: ${world.color}">▶ Play</button>
             `
             }
         `;
@@ -650,8 +523,6 @@ function playWorld(worldId) {
 
   gameState.selectedWorld = worldId;
   gameState.questionCount = 0;
-  gameState.chain = 0;
-  updateChainDisplay();
 
   const world = WORLDS[worldId];
   if (worldId === "mathReadingTrail") {
@@ -812,14 +683,11 @@ function startNewQuestion(isRetry) {
   }
 
   // Use the per-world selectedDifficulty for the timer
-  const worldId = question.world || (question.difficulty ? null : null);
   const difficulty =
     gameState.selectedDifficulty[question.world] ||
     question.difficulty ||
     "easy";
   startTimer(difficulty);
-
-  updateChainDisplay();
 
   setDrawingLayerEnabled(gameState.debugSettings.writingLayerEnabled !== false);
 }
@@ -958,16 +826,8 @@ function initDailyQuest() {
     return;
   }
 
-  const newQuest = generateDailyQuest(gameState.unlockedWorlds);
-  if (newQuest) {
-    gameState.dailyQuest = newQuest;
-    saveGame();
-    setTimeout(() => {
-      showNotification("📅 Daily Quest Available!");
-    }, 1000);
-    addDailyQuestNotification();
-    updateNotifBadge();
-  }
+  // Daily quest system disabled (no longer generates new quests)
+  // Keep for backward compatibility with existing saved data
 }
 
 function addDailyQuestNotification() {
@@ -979,7 +839,7 @@ function addDailyQuestNotification() {
   const quest = gameState.dailyQuest;
   let statusMsg = "In Progress";
   if (quest.completed && !quest.rewardClaimed) {
-    statusMsg = "✅ Complete! Claim your reward!";
+    statusMsg = "✅ Complete!";
   } else if (quest.rewardClaimed) {
     statusMsg = "🎁 Reward Claimed";
   }
@@ -988,7 +848,6 @@ function addDailyQuestNotification() {
     type: "quest",
     title: "📅 Daily Quest",
     message: `${quest.targets.map((t, i) => `${t.name}: ${quest.progress[i]}/${t.count}`).join(" • ")} — ${statusMsg}`,
-    xp: quest.rewardClaimed ? DAILY_QUEST_CONFIG.rewardXP : 0,
     priority: "high",
     autoToast: false,
   });
@@ -996,7 +855,6 @@ function addDailyQuestNotification() {
 
 function updateDailyQuestProgress(worldId) {
   if (!gameState.dailyQuest || gameState.dailyQuest.completed) return;
-
   const quest = gameState.dailyQuest;
   let updated = false;
 
@@ -1011,12 +869,11 @@ function updateDailyQuestProgress(worldId) {
     const allDone = quest.targets.every((t, i) => quest.progress[i] >= t.count);
     if (allDone && !quest.completed) {
       quest.completed = true;
-      showNotification("🎉 Daily Quest Complete! Claim your reward!");
+      showNotification("🎉 Daily Quest Complete!");
       notificationManager.add({
         type: "quest",
         title: "🎯 Quest Complete",
-        message: "You've completed today's daily quest! Claim your reward!",
-        xp: DAILY_QUEST_CONFIG.rewardXP,
+        message: "You've completed today's daily quest!",
         priority: "high",
         autoToast: false,
       });
@@ -1037,19 +894,16 @@ function claimDailyQuestReward() {
 
   gameState.dailyQuest.rewardClaimed = true;
   gameState.stars += DAILY_QUEST_CONFIG.rewardStars;
-  gameState.xp += DAILY_QUEST_CONFIG.rewardXP;
 
   saveGame();
   updateNotifBadge();
-  updateStatusBar();
 
-  showNotification(`🎁 Claimed! +${DAILY_QUEST_CONFIG.rewardXP} XP + ⭐ Star`);
+  showNotification(`🎁 Claimed! +⭐ Star`);
 
   notificationManager.add({
     type: "reward",
     title: "🎁 Quest Reward Claimed",
-    message: `You received +${DAILY_QUEST_CONFIG.rewardXP} XP and ⭐ Star`,
-    xp: DAILY_QUEST_CONFIG.rewardXP,
+    message: `You received ⭐ Star`,
     priority: "high",
     autoToast: false,
   });
@@ -1067,7 +921,6 @@ const notificationManager = {
     type = "system",
     title = "Notification",
     message = "",
-    xp = 0,
     priority = "medium",
     autoToast = true,
   }) {
@@ -1076,7 +929,6 @@ const notificationManager = {
       type: type, // "xp" | "quest" | "reward" | "system" | "achievement"
       title: title,
       message: message,
-      xp: xp,
       read: false,
       timestamp: Date.now(),
       priority: priority, // "low" | "medium" | "high"
@@ -1166,7 +1018,7 @@ const notificationManager = {
       } else if (n.type === "system") {
         groups.system.push(n);
       } else {
-        // xp, achievement, or others — put in "today" if recent
+        // achievement or others — put in "today" if recent
         if (n.timestamp >= todayMs) {
           groups.today.push(n);
         } else {
@@ -1249,11 +1101,8 @@ function renderNotificationPanel() {
 }
 
 function buildNotifItemHTML(item) {
-  const xpText =
-    item.xp > 0 ? `<span class="notif-xp">+${item.xp} XP</span>` : "";
   const typeIcon =
     {
-      xp: "⭐",
       quest: "🎯",
       reward: "🎁",
       system: "⚙",
@@ -1271,7 +1120,6 @@ function buildNotifItemHTML(item) {
       <div class="notif-item-header">
         <span class="notif-item-icon">${typeIcon}</span>
         <span class="notif-item-title">${item.title}</span>
-        ${xpText}
       </div>
       <div class="notif-item-msg">${item.message}</div>
       <div class="notif-item-actions">
@@ -1307,26 +1155,6 @@ function showNotification(message) {
     notification.classList.add("fade-out");
     setTimeout(() => notification.remove(), 500);
   }, 3000);
-}
-
-// ===== FEEDBACK =====
-function showCorrectFeedback() {
-  const feedback = document.getElementById("feedback");
-  feedback.className = "feedback correct";
-  const messages = [
-    "✅ Correct! +10 XP",
-    "🎉 Great job!",
-    "👍 Awesome!",
-    "⭐ Perfect!",
-    "💪 Keep it up!",
-  ];
-  feedback.textContent = messages[Math.floor(Math.random() * messages.length)];
-}
-
-function showWrongFeedback() {
-  const feedback = document.getElementById("feedback");
-  const messages = ["❌ Not quite.", "🤔 Almost!", "💪 You can do it!"];
-  feedback.textContent = messages[Math.floor(Math.random() * messages.length)];
 }
 
 // ===== SOUND EFFECTS =====
@@ -1373,10 +1201,6 @@ function renderDashboard() {
         <h3>📊 Your Progress</h3>
         <div class="stats-grid">
             <div class="stat-item">
-                <div class="stat-value">${gameState.xp}</div>
-                <div class="stat-label">Total XP</div>
-            </div>
-            <div class="stat-item">
                 <div class="stat-value">${gameState.totalCorrect}/${gameState.totalQuestions}</div>
                 <div class="stat-label">Correct</div>
             </div>
@@ -1387,16 +1211,6 @@ function renderDashboard() {
             <div class="stat-item">
                 <div class="stat-value">${gameState.unlockedWorlds.length}/${Object.keys(WORLDS).length}</div>
                 <div class="stat-label">Worlds</div>
-            </div>
-        </div>
-        <div class="stats-grid" style="margin-top: 10px; grid-template-columns: 1fr 1fr;">
-            <div class="stat-item">
-                <div class="stat-value">${gameState.chain > 0 ? `🔥 ${gameState.chain}` : "—"}</div>
-                <div class="stat-label">Current Chain</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">🔥 ${gameState.bestChain}</div>
-                <div class="stat-label">Best Chain</div>
             </div>
         </div>
     `;
@@ -1448,7 +1262,7 @@ function renderDashboard() {
     });
     questHtml += `</div>`;
     if (quest.completed && !quest.rewardClaimed) {
-      questHtml += `<button class="debug-btn" style="margin-top:10px;" onclick="claimDailyQuestReward(); renderDashboard();">🎁 Claim Reward (⭐ + ${DAILY_QUEST_CONFIG.rewardXP} XP)</button>`;
+      questHtml += `<button class="debug-btn" style="margin-top:10px;" onclick="claimDailyQuestReward(); renderDashboard();">🎁 Claim Reward (⭐ Star)</button>`;
     }
     questCard.innerHTML = questHtml;
     dashboardContent.appendChild(questCard);
@@ -1461,11 +1275,8 @@ function renderDashboard() {
         <ul class="tips-list">
             <li>📅 Encourage 10-15 minutes of daily practice</li>
             <li>🎯 Celebrate small wins and progress</li>
-            <li>🔓 New worlds unlock at: 100, 200, 400, 600, 800, 1000 XP</li>
             <li>💡 Wrong answers = learning opportunities</li>
             <li>🌟 Stars are earned every 10 correct answers</li>
-            <li>🔥 Build chains of 3, 5, or 10 for bonus XP!</li>
-            <li>🔍 Support boards fade as you master each world</li>
             <li>📝 Use the Work Area to draw calculations</li>
             <li>💡 Tap "I Need Help" for guided hints</li>
         </ul>
@@ -1506,65 +1317,6 @@ function updateDebugLabel() {
 }
 
 // ===== DEBUG FUNCTIONS =====
-function debugAddXP(amount) {
-  gameState.xp += amount;
-  gameState.debugMode = true;
-  checkUnlocks();
-  saveGame();
-  updateStatusBar();
-  showNotification(`⭐ +${amount} XP added`);
-  notificationManager.add({
-    type: "xp",
-    title: "Debug XP Added",
-    message: `+${amount} XP (debug)`,
-    xp: amount,
-    priority: "low",
-    autoToast: false,
-  });
-  updateDebugLabel();
-}
-
-function debugRemoveXP(amount) {
-  gameState.xp = Math.max(0, gameState.xp - amount);
-  gameState.debugMode = true;
-  saveGame();
-  updateStatusBar();
-  showNotification(`⭐ ${amount} XP removed`);
-  updateDebugLabel();
-}
-
-function debugSetXP(amount) {
-  gameState.xp = amount;
-  gameState.debugMode = true;
-  checkUnlocks();
-  saveGame();
-  updateStatusBar();
-  showNotification(`⭐ XP set to ${amount}`);
-  updateDebugLabel();
-}
-
-function debugSupportForce(forceOn) {
-  gameState.debugSettings.supportBoardOverride = forceOn;
-  gameState.debugMode = true;
-  saveGame();
-  showNotification(`📋 Support Board ${forceOn ? "Forced ON" : "Forced OFF"}`);
-  updateDebugLabel();
-  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
-    renderSupportBoard(gameState.selectedWorld);
-  }
-}
-
-function debugSupportAuto() {
-  gameState.debugSettings.supportBoardOverride = null;
-  gameState.debugMode = true;
-  saveGame();
-  showNotification("📋 Support Board: Auto mode");
-  updateDebugLabel();
-  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
-    renderSupportBoard(gameState.selectedWorld);
-  }
-}
-
 function debugUnlockAllWorlds() {
   const allWorldIds = Object.keys(WORLDS);
   gameState.unlockedWorlds = allWorldIds;
@@ -1578,7 +1330,6 @@ function debugUnlockAllWorlds() {
 
 function debugLockAllWorlds() {
   gameState.unlockedWorlds = ["numberRanch", "subtractionCanyon"];
-  gameState.xp = 0;
   gameState.debugMode = true;
   saveGame();
   showNotification(
@@ -1594,19 +1345,6 @@ function debugTimerToggle(enabled) {
   gameState.debugMode = true;
   saveGame();
   showNotification(`⏱️ Timer ${enabled ? "ON" : "OFF"}`);
-  updateDebugLabel();
-}
-
-function debugChainToggle(enabled) {
-  gameState.debugSettings.chainEnabled = enabled;
-  if (!enabled) {
-    gameState.chain = 0;
-    gameState.chainXpBonus = 0;
-    updateChainDisplay();
-  }
-  gameState.debugMode = true;
-  saveGame();
-  showNotification(`🔥 Chain ${enabled ? "Enabled" : "Disabled"}`);
   updateDebugLabel();
 }
 
@@ -1635,12 +1373,25 @@ function debugDrawToggle(enabled) {
   updateDebugLabel();
 }
 
-// ===== STATUS BAR =====
-function updateStatusBar() {
-  document.getElementById("xpDisplay").textContent = `⭐ ${gameState.xp} XP`;
-  const bar = document.getElementById("xpBarFill");
-  if (bar) {
-    bar.style.width = `${Math.min(gameState.xp / 20, 100)}%`;
+function debugSupportForce(forceOn) {
+  gameState.debugSettings.supportBoardOverride = forceOn;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification(`📋 Support Board ${forceOn ? "Forced ON" : "Forced OFF"}`);
+  updateDebugLabel();
+  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
+    renderSupportBoard(gameState.selectedWorld);
+  }
+}
+
+function debugSupportAuto() {
+  gameState.debugSettings.supportBoardOverride = null;
+  gameState.debugMode = true;
+  saveGame();
+  showNotification("📋 Support Board: Auto mode");
+  updateDebugLabel();
+  if (gameState.currentScreen === "game" && gameState.selectedWorld) {
+    renderSupportBoard(gameState.selectedWorld);
   }
 }
 

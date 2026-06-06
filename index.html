@@ -22,10 +22,6 @@
     <div id="app">
       <!-- ===== STATUS BAR ===== -->
       <div id="statusBar">
-        <span class="xp-display" id="xpDisplay">⭐ 0 XP</span>
-        <div class="xp-bar-outer">
-          <div class="xp-bar-fill" id="xpBarFill"></div>
-        </div>
         <!-- Notification Bell -->
         <button
           class="status-btn notif-bell-btn"
@@ -64,8 +60,7 @@
         <div class="start-emoji">🐱</div>
         <h1 class="start-title">Math Outlaw<br />Quest</h1>
         <p class="start-subtitle">
-          Learn math through adventure!<br />Practice, earn XP, and unlock new
-          worlds!
+          Learn math through adventure!<br />Practice and unlock new worlds!
         </p>
         <button class="start-btn" onclick="showScreen('map')">
           ▶ Start Adventure
@@ -98,9 +93,6 @@
           </div>
           <div class="timer-text" id="timerDisplay">0:30</div>
         </div>
-
-        <!-- Chain Display -->
-        <div id="chainDisplay" class="chain-display"></div>
 
         <div class="question-card">
           <div id="questionContainer">
@@ -198,45 +190,6 @@
           </button>
         </div>
         <div class="debug-panel-content">
-          <!-- XP Controls -->
-          <div class="debug-section">
-            <h4>⭐ XP Controls</h4>
-            <div class="debug-btn-row">
-              <button class="debug-action-btn" onclick="debugAddXP(10)">
-                +10
-              </button>
-              <button class="debug-action-btn" onclick="debugAddXP(100)">
-                +100
-              </button>
-              <button
-                class="debug-action-btn debug-action-danger"
-                onclick="debugRemoveXP(10)"
-              >
-                -10
-              </button>
-              <button
-                class="debug-action-btn debug-action-danger"
-                onclick="debugRemoveXP(100)"
-              >
-                -100
-              </button>
-            </div>
-            <div class="debug-btn-row">
-              <button class="debug-action-btn" onclick="debugSetXP(0)">
-                Set 0
-              </button>
-              <button class="debug-action-btn" onclick="debugSetXP(100)">
-                Set 100
-              </button>
-              <button class="debug-action-btn" onclick="debugSetXP(500)">
-                Set 500
-              </button>
-              <button class="debug-action-btn" onclick="debugSetXP(1000)">
-                Set 1000
-              </button>
-            </div>
-          </div>
-
           <!-- Support Board Controls -->
           <div class="debug-section">
             <h4>📋 Support Board</h4>
@@ -294,27 +247,6 @@
                 onclick="debugTimerToggle(false)"
               >
                 Timer OFF
-              </button>
-            </div>
-          </div>
-
-          <!-- Chain System Controls -->
-          <div class="debug-section">
-            <h4>🔥 Chain System</h4>
-            <div class="debug-btn-row">
-              <button
-                class="debug-toggle-btn"
-                id="debugChainOn"
-                onclick="debugChainToggle(true)"
-              >
-                Enable Chain Bonus
-              </button>
-              <button
-                class="debug-toggle-btn"
-                id="debugChainOff"
-                onclick="debugChainToggle(false)"
-              >
-                Disable Chain Bonus
               </button>
             </div>
           </div>

@@ -152,52 +152,6 @@ const THEME_CONFIGS = {
   },
 };
 
-// ===== DAILY QUEST CONFIG =====
-const DAILY_QUEST_CONFIG = {
-  possibleTargets: [
-    { world: "numberRanch", name: "Addition Questions" },
-    { world: "subtractionCanyon", name: "Subtraction Questions" },
-    { world: "multiplicationMountain", name: "Multiplication Questions" },
-    { world: "divisionDesert", name: "Division Questions" },
-    { world: "moneyMarket", name: "Money Questions" },
-    { world: "timeTower", name: "Time Questions" },
-    { world: "fractionForest", name: "Fraction Questions" },
-    { world: "decimalDocks", name: "Decimal Questions" },
-    { world: "mathReadingTrail", name: "Reading Math Questions" },
-  ],
-  targetCounts: [5, 5], // 2 targets, 5 questions each
-  rewardXP: 50,
-  rewardStars: 1,
-};
-
-function generateDailyQuest(unlockedWorlds) {
-  // Get date string for today
-  const today = new Date().toISOString().split("T")[0];
-
-  // Filter to unlocked worlds that have question generators
-  const available = DAILY_QUEST_CONFIG.possibleTargets.filter((t) =>
-    unlockedWorlds.includes(t.world),
-  );
-
-  if (available.length === 0) return null;
-
-  // Pick up to 2 targets
-  const shuffled = [...available].sort(() => Math.random() - 0.5);
-  const targets = shuffled.slice(0, 2).map((t, i) => ({
-    world: t.world,
-    name: t.name,
-    count: DAILY_QUEST_CONFIG.targetCounts[i] || 5,
-  }));
-
-  return {
-    date: today,
-    targets: targets,
-    progress: targets.map(() => 0),
-    completed: false,
-    rewardClaimed: false,
-  };
-}
-
 // ===== WORLDS =====
 const WORLDS = {
   numberRanch: {
@@ -206,7 +160,6 @@ const WORLDS = {
     emoji: "🌾",
     color: "#4CAF50",
     description: "Addition & Number Sense",
-    unlockXP: 0,
     difficulties: ["easy", "medium", "hard"],
     supportBoard: "numberRanch",
     generateQuestion: function (difficulty) {
@@ -254,7 +207,6 @@ const WORLDS = {
     emoji: "🏜️",
     color: "#FF9800",
     description: "Subtraction & Borrowing",
-    unlockXP: 0,
     difficulties: ["easy", "medium", "hard"],
     supportBoard: "subtractionCanyon",
     generateQuestion: function (difficulty) {
@@ -304,7 +256,6 @@ const WORLDS = {
     emoji: "⛰️",
     color: "#9C27B0",
     description: "Multiplication Facts",
-    unlockXP: 100,
     difficulties: ["easy", "medium", "hard"],
     supportBoard: "multiplicationMountain",
     progression: [2, 5, 10, 3, 4, 6, 7, 8, 9],
@@ -359,7 +310,6 @@ const WORLDS = {
     emoji: "🏝️",
     color: "#F44336",
     description: "Division & Equal Sharing",
-    unlockXP: 200,
     difficulties: ["easy", "medium", "hard"],
     supportBoard: "divisionDesert",
     generateQuestion: function (difficulty) {
@@ -404,7 +354,6 @@ const WORLDS = {
     emoji: "💰",
     color: "#FFD700",
     description: "Counting Money",
-    unlockXP: 400,
     difficulties: ["easy", "medium", "hard"],
     generateQuestion: function (difficulty) {
       let a, b, answer, questionText;
@@ -452,7 +401,6 @@ const WORLDS = {
     emoji: "🕐",
     color: "#00BCD4",
     description: "Reading Clocks",
-    unlockXP: 600,
     difficulties: ["easy", "medium", "hard"],
     generateQuestion: function (difficulty) {
       let hours, minutes, answer, questionText;
@@ -500,7 +448,6 @@ const WORLDS = {
     emoji: "🍕",
     color: "#8BC34A",
     description: "Fractions",
-    unlockXP: 800,
     difficulties: ["easy", "medium", "hard"],
     generateQuestion: function (difficulty) {
       let answer, questionText;
@@ -557,7 +504,6 @@ const WORLDS = {
     emoji: "⚓",
     color: "#607D8B",
     description: "Decimals & Money",
-    unlockXP: 1000,
     difficulties: ["easy", "medium", "hard"],
     generateQuestion: function (difficulty) {
       let a, b, answer, questionText;
@@ -605,7 +551,6 @@ const WORLDS = {
     emoji: "📖",
     color: "#00BCD4",
     description: "Read & Solve Word Problems",
-    unlockXP: 500,
     difficulties: ["easy", "medium", "hard"],
     theme: "forest", // default theme
     hasTimer: false, // Reading Trail has no timer
@@ -757,16 +702,9 @@ const WORLDS = {
   },
 };
 
-// ===== XP THRESHOLDS FOR SUPPORT VISIBILITY =====
+// ===== SUPPORT VISIBILITY (always fully visible) =====
 function getSupportVisibility(worldId) {
-  const progress = gameState ? gameState.worldProgress[worldId] : null;
-  if (!progress) return 1;
-  const correct = progress.correct || 0;
-  if (correct < 10) return 1; // Beginner: 100%
-  if (correct < 30) return 0.75; // Intermediate: 75%
-  if (correct < 60) return 0.5; // Skilled: 50%
-  if (correct < 100) return 0.25; // Advanced: 25%
-  return 0; // Master: 0%
+  return 1; // Always fully visible
 }
 
 // ===== TIMER CONFIG =====
@@ -781,21 +719,6 @@ const READING_THEMES = ["forest", "desert", "ice", "castle"];
 
 function getReadingThemeForIndex(index) {
   return READING_THEMES[index % READING_THEMES.length];
-}
-
-// ===== CHAIN BONUS CONFIG =====
-function getChainBonus(chain) {
-  if (chain >= 10) return 3;
-  if (chain >= 5) return 1;
-  if (chain >= 3) return 0.5;
-  return 0;
-}
-
-function getChainEmoji(chain) {
-  if (chain >= 10) return "🔥🔥🔥";
-  if (chain >= 5) return "🔥🔥";
-  if (chain >= 3) return "🔥";
-  return "";
 }
 
 // ===== Helper Functions =====
