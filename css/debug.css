@@ -1,0 +1,181 @@
+/* ===== DEBUG PANEL ===== */
+.debug-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease;
+}
+
+.debug-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 500px;
+  background: #1a1a2e;
+  border-radius: 16px 16px 0 0;
+  padding: 12px 16px;
+  color: white;
+}
+
+.debug-panel-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.debug-close-btn {
+  background: none;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.debug-panel-content {
+  width: 100%;
+  max-width: 500px;
+  background: #16213e;
+  border-radius: 0 0 16px 16px;
+  padding: 12px 16px;
+}
+
+.debug-section {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.debug-section h4 {
+  font-size: 0.8rem;
+  color: #ffd54f;
+  margin-bottom: 6px;
+}
+
+.debug-btn-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.debug-btn-row:last-child {
+  margin-bottom: 0;
+}
+
+.debug-action-btn {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #4caf50;
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  min-height: 36px;
+  flex: 1;
+  min-width: 0;
+}
+
+.debug-action-btn:active {
+  background: #4caf50;
+  color: white;
+}
+
+.debug-action-danger {
+  border-color: #f44336;
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef9a9a;
+}
+
+.debug-action-danger:active {
+  background: #f44336;
+  color: white;
+}
+
+.debug-toggle-btn {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #2196f3;
+  background: rgba(33, 150, 243, 0.15);
+  color: #90caf9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  min-height: 36px;
+  flex: 1;
+  min-width: 0;
+}
+
+.debug-toggle-btn:active {
+  background: #2196f3;
+  color: white;
+}
+
+/* ===== DEBUG PANEL BUTTON (in dashboard) ===== */
+.debug-btn {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid #ff9800;
+  background: #fff3e0;
+  color: #e65100;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  min-height: 38px;
+}
+
+.debug-btn:hover {
+  background: #ff9800;
+  color: white;
+}
+
+.debug-btn:active {
+  transform: scale(0.95);
+}
+
+/* ===== DEBUG MODE LABEL ===== */
+.debug-mode-label {
+  position: fixed;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  background: rgba(244, 67, 54, 0.8);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
