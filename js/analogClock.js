@@ -1,13 +1,16 @@
 // ===== Reusable Analog Clock SVG Generator =====
 // Returns an SVG string for an analog clock face with the given hour and minute.
 // Usage: createAnalogClock(hour, minute) -> SVG string
+//        createAnalogClock(hour, minute, 140) -> smaller SVG (140px)
+//        createAnalogClock(hour, minute, 200) -> larger SVG (200px)
 
-function createAnalogClock(hour, minute) {
+function createAnalogClock(hour, minute, size) {
   // Normalize inputs
   hour = hour % 12;
   minute = Math.min(59, Math.max(0, minute || 0));
+  size = size || 180; // default size 180px
 
-  // Clock face dimensions
+  // Clock face dimensions (viewBox is always 200x200 so internal coords don't change)
   const cx = 100,
     cy = 100,
     r = 90;
@@ -53,8 +56,8 @@ function createAnalogClock(hour, minute) {
     ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#555" stroke-width="${strokeW}" opacity="${opacity}" />\n    `;
   }
 
-  // Build the SVG
-  const svg = `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;">
+  // Build the SVG — use the provided size for width/height
+  const svg = `<svg viewBox="0 0 200 200" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;">
     <!-- Clock face outer circle -->
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="#333" stroke-width="4" />
     

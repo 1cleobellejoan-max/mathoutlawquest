@@ -338,12 +338,10 @@ const WORLDS = {
           hours = rand(1, 11);
           minutes = rand(0, 59);
           var targetHour = hours + 1;
+          var clockSvgMedium = createAnalogClock(hours, minutes, 140);
           questionText =
-            "It is " +
-            hours +
-            ":" +
-            String(minutes).padStart(2, "0") +
-            ".\nHow many minutes until " +
+            clockSvgMedium +
+            "\n\nIt is shown on the clock above.\nHow many minutes until " +
             targetHour +
             ":00?";
           answer = 60 - minutes;
@@ -355,16 +353,14 @@ const WORLDS = {
           var m2 = rand(0, 59);
           var total1 = h1 * 60 + m1;
           var total2 = h2 * 60 + m2;
+          var clockSvgHard = createAnalogClock(h1, m1, 140);
           questionText =
-            "From " +
-            h1 +
-            ":" +
-            String(m1).padStart(2, "0") +
-            "\nTo " +
+            clockSvgHard +
+            "\n\nFrom the time shown above,\nTo " +
             h2 +
             ":" +
             String(m2).padStart(2, "0") +
-            "\nHow many minutes?";
+            "\nHow many minutes have passed?";
           answer = total2 - total1;
           break;
       }
