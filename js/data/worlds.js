@@ -712,4 +712,218 @@ const WORLDS = {
       return "Read the story carefully. Look for key numbers and decide which operation to use (+, \u2212, \u00D7, \u00F7).";
     },
   },
+  ratioRidge: {
+    id: "ratioRidge",
+    name: "Ratio Ridge",
+    emoji: "\u{1F9ED}",
+    color: "#E91E63",
+    description: "Ratio, Proportion & Percent",
+    difficulties: ["easy", "medium", "hard"],
+    supportBoard: "ratioRidge",
+    generateQuestion: function (difficulty) {
+      var skill = rand(0, 2); // 0=Ratio, 1=Proportion, 2=Percent
+      var questionText, answer;
+      switch (skill) {
+        case 0: // Ratio
+          switch (difficulty) {
+            case "easy": {
+              var r1 = rand(1, 5);
+              var r2 = rand(1, 5);
+              var item1 = [
+                "red marbles",
+                "blue marbles",
+                "apples",
+                "oranges",
+                "pencils",
+                "erasers",
+              ][rand(0, 5)];
+              var item2 = [
+                "green marbles",
+                "yellow marbles",
+                "bananas",
+                "grapes",
+                "pens",
+                "rulers",
+              ][rand(0, 5)];
+              questionText =
+                "A bag has " +
+                r1 +
+                " " +
+                item1 +
+                " and " +
+                r2 +
+                " " +
+                item2 +
+                ".\nWhat is the ratio of " +
+                item1 +
+                " to " +
+                item2 +
+                "?\n(Type as number:number)";
+              answer = r1 + ":" + r2;
+              break;
+            }
+            case "medium": {
+              var ratioA = rand(2, 4);
+              var ratioB = rand(2, 4);
+              var qtyA = ratioA * rand(2, 5);
+              var groupA = ["teachers", "girls", "dogs", "adults"][rand(0, 3)];
+              var groupB = ["students", "boys", "cats", "children"][rand(0, 3)];
+              questionText =
+                "The ratio of " +
+                groupA +
+                " to " +
+                groupB +
+                " is " +
+                ratioA +
+                ":" +
+                ratioB +
+                ".\nIf there are " +
+                qtyA +
+                " " +
+                groupA +
+                ", how many " +
+                groupB +
+                " are there?";
+              answer = (qtyA / ratioA) * ratioB;
+              break;
+            }
+            case "hard": {
+              var rtA = rand(2, 5);
+              var rtB = rand(2, 5);
+              var total = (rtA + rtB) * rand(2, 6);
+              var fruitA = ["apples", "mangoes", "roses", "coins"][rand(0, 3)];
+              var fruitB = ["oranges", "bananas", "tulips", "stamps"][
+                rand(0, 3)
+              ];
+              questionText =
+                "The ratio of " +
+                fruitA +
+                " to " +
+                fruitB +
+                " is " +
+                rtA +
+                ":" +
+                rtB +
+                ".\nIf there are " +
+                total +
+                " " +
+                fruitA +
+                " and " +
+                fruitB +
+                " altogether, how many " +
+                fruitA +
+                " are there?";
+              var part = total / (rtA + rtB);
+              answer = part * rtA;
+              break;
+            }
+          }
+          break;
+        case 1: // Proportion
+          switch (difficulty) {
+            case "easy": {
+              var pNum = rand(2, 9);
+              var pFactor = rand(2, 5);
+              var pAns = pNum * pFactor;
+              questionText =
+                "Solve for x:\n" + pNum + "/" + pNum * 2 + " = " + pAns + "/x";
+              answer = pAns * 2;
+              break;
+            }
+            case "medium": {
+              var cost = rand(2, 10) * 5;
+              var qty1 = rand(2, 5);
+              var qty2 = rand(3, 8);
+              questionText =
+                "If " +
+                qty1 +
+                " apples cost \u20B1" +
+                cost * qty1 +
+                ",\nhow much do " +
+                qty2 +
+                " apples cost?";
+              answer = cost * qty2;
+              break;
+            }
+            case "hard": {
+              var workers = rand(3, 6);
+              var days = rand(4, 10);
+              var newWorkers = workers + rand(1, 3);
+              questionText =
+                "If " +
+                workers +
+                " workers can build a wall in " +
+                days +
+                " days,\nhow many days will it take " +
+                newWorkers +
+                " workers?\n(Round to nearest whole number)";
+              answer = Math.round((workers * days) / newWorkers);
+              break;
+            }
+          }
+          break;
+        case 2: // Percent
+          switch (difficulty) {
+            case "easy": {
+              var pcts = [10, 20, 25, 50, 75];
+              var pct = pcts[rand(0, pcts.length - 1)];
+              var num = rand(2, 10) * 10;
+              questionText = "What is " + pct + "% of " + num + "?";
+              answer = (pct / 100) * num;
+              break;
+            }
+            case "medium": {
+              var part = rand(2, 9) * 10;
+              var whole = part + rand(1, 5) * 10;
+              questionText = "What percent of " + whole + " is " + part + "?";
+              answer = Math.round((part / whole) * 100);
+              break;
+            }
+            case "hard": {
+              var price = rand(10, 50) * 10;
+              var discountPct = rand(2, 4) * 5;
+              var salePrice = price - (price * discountPct) / 100;
+              questionText =
+                "A \u20B1" +
+                price +
+                " item is on sale for " +
+                discountPct +
+                "% off.\nWhat is the sale price?";
+              answer = salePrice;
+              break;
+            }
+          }
+          break;
+      }
+      return {
+        question: questionText,
+        answer: answer,
+        difficulty: difficulty,
+        world: "ratioRidge",
+      };
+    },
+    getHint: function (question) {
+      if (question.includes("ratio of")) {
+        if (question.includes("altogether")) {
+          return "1) Add the ratio parts to find total parts\n2) Divide the total by the sum of parts\n3) Multiply by the part you need\n\nExample: ratio 2:3, total 30 → each part = 30\u00F75 = 6";
+        }
+        return "A ratio compares two quantities.\n\nWrite the numbers in the same order as the items mentioned.\n\nSimplify if you can!";
+      }
+      if (
+        question.includes("Solve for x") ||
+        question.includes("apples cost") ||
+        question.includes("workers")
+      ) {
+        return "Use cross multiplication:\n\na/b = c/x → a \u00D7 x = b \u00D7 c\n\nThen divide to find x.";
+      }
+      if (
+        question.includes("percent") ||
+        question.includes("% of") ||
+        question.includes("sale")
+      ) {
+        return "Percent means 'out of 100'.\n\nTo find a percent: (percent \u00F7 100) \u00D7 whole\n\nFor discounts: price \u2212 (price \u00D7 discount%)";
+      }
+      return "Read carefully. Identify what you know and what you need to find. Choose the right operation.";
+    },
+  },
 };

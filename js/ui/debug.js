@@ -18,8 +18,8 @@ function updateDebugLabel() {
 
 // ===== DEBUG FUNCTIONS =====
 function debugUnlockAllWorlds() {
-  var allWorldIds = Object.keys(WORLDS);
-  gameState.unlockedWorlds = allWorldIds;
+  gameState.stars = Math.max(gameState.stars, 30);
+  updateUnlockedWorlds();
   gameState.debugMode = true;
   saveGame();
   showNotification("\uD83D\uDD13 All worlds unlocked!");
@@ -29,7 +29,8 @@ function debugUnlockAllWorlds() {
 }
 
 function debugLockAllWorlds() {
-  gameState.unlockedWorlds = ["numberRanch", "subtractionCanyon"];
+  gameState.stars = 0;
+  updateUnlockedWorlds();
   gameState.debugMode = true;
   saveGame();
   showNotification(
@@ -38,14 +39,6 @@ function debugLockAllWorlds() {
   updateDebugLabel();
   if (gameState.currentScreen === "map") renderMap();
   if (gameState.currentScreen === "dashboard") renderDashboard();
-}
-
-function debugTimerToggle(enabled) {
-  gameState.debugSettings.timerEnabled = enabled;
-  gameState.debugMode = true;
-  saveGame();
-  showNotification("\u23F1\uFE0F Timer " + (enabled ? "ON" : "OFF"));
-  updateDebugLabel();
 }
 
 function debugVocabToggle(enabled) {

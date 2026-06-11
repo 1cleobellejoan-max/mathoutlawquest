@@ -97,6 +97,43 @@ const SUPPORT_BOARDS = {
       </div>
     `,
   },
+  ratioRidge: {
+    title: "\u{1F4C8} Ratio & Percent Reference",
+    content: `
+      <div class="support-board">
+        <div class="fact-family-grid">
+          <div class="fact-family">
+            <h4>\u{1F9EE} What is a Ratio?</h4>
+            <p>A ratio compares two quantities.</p>
+            <p>Example: 3:2 means 3 of one thing for every 2 of another.</p>
+            <p>Can be written as 3:2 or 3/2.</p>
+          </div>
+          <div class="fact-family">
+            <h4>\u2697\uFE0F Proportions</h4>
+            <p>Two equal ratios form a proportion.</p>
+            <p>Cross multiply to solve:</p>
+            <p>a/b = c/x \u2192 a \u00D7 x = b \u00D7 c</p>
+          </div>
+          <div class="fact-family">
+            <h4>% Percent Basics</h4>
+            <p>Percent = "out of 100"</p>
+            <p>50% = 50/100 = 1/2</p>
+            <p>25% = 25/100 = 1/4</p>
+            <p>10% = 10/100 = 1/10</p>
+            <p>To find % of a number: (percent \u00F7 100) \u00D7 number</p>
+          </div>
+          <div class="fact-family">
+            <h4>\u{1F4B5} Common Percent Conversions</h4>
+            <p>50% = 1/2 &nbsp; \u2022 &nbsp; 25% = 1/4</p>
+            <p>75% = 3/4 &nbsp; \u2022 &nbsp; 10% = 1/10</p>
+            <p>20% = 1/5 &nbsp; \u2022 &nbsp; 33\u2153% = 1/3</p>
+            <p>100% = 1 &nbsp; \u2022 &nbsp; 200% = 2</p>
+          </div>
+        </div>
+        <p class="support-tip">\u{1F4A1} <strong>Tip:</strong> For "of" problems, multiply! For "what percent" problems, divide part by whole and multiply by 100.</p>
+      </div>
+    `,
+  },
 };
 
 // ===== SUPPORT VISIBILITY (always fully visible) =====

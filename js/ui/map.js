@@ -7,7 +7,7 @@ function renderMap() {
   worldGrid.className = "world-grid";
   worldKeys.forEach(function (worldId) {
     var world = WORLDS[worldId];
-    var isUnlocked = gameState.unlockedWorlds.includes(worldId);
+    var isUnlocked = isWorldUnlocked(worldId);
     var progress = gameState.worldProgress[worldId];
     var pct =
       progress.total > 0
@@ -56,6 +56,11 @@ function renderMap() {
         world.color +
         '">\u25B6 Play</button>';
     } else {
+      var requiredStars = WORLD_UNLOCK_REQUIREMENTS[worldId] || 0;
+      html +=
+        '<div class="world-lock-info">Needs ' +
+        requiredStars +
+        " stars</div>";
       html +=
         '<button class="play-btn" onclick="playWorld(\'' +
         worldId +
@@ -75,14 +80,19 @@ function selectDifficulty(diff, worldId, event) {
     event.stopPropagation();
     event.preventDefault();
   }
+  if (!isWorldUnlocked(worldId)) return;
   gameState.selectedDifficulty[worldId] = diff;
   saveGame();
   renderMap();
 }
 
 function playWorld(worldId) {
+  if (!isWorldUnlocked(worldId)) {
+    showNotification("Locked world. Earn more stars to unlock it!");
+    return;
+  }
   gameState.selectedWorld = worldId;
-  gameState.questionCount = 0;
+  startLesson();
   var world = WORLDS[worldId];
   if (worldId === "mathReadingTrail") {
     var themeIndex = gameState.questionCount;

@@ -14,6 +14,15 @@ function renderDashboard() {
     gameState.totalQuestions +
     '</div><div class="stat-label">Correct</div></div>' +
     '<div class="stat-item"><div class="stat-value">' +
+    "Lv. " +
+    gameState.progression.level +
+    '</div><div class="stat-label">Level</div></div>' +
+    '<div class="stat-item"><div class="stat-value">' +
+    gameState.progression.xp +
+    "/" +
+    gameState.progression.xpToNextLevel +
+    '</div><div class="stat-label">XP</div></div>' +
+    '<div class="stat-item"><div class="stat-value">' +
     gameState.stars +
     ' \u2B50</div><div class="stat-label">Stars</div></div>' +
     '<div class="stat-item"><div class="stat-value">' +
@@ -37,7 +46,7 @@ function renderDashboard() {
       progress.total > 0
         ? Math.round((progress.correct / progress.total) * 100)
         : 0;
-    var isUnlocked = gameState.unlockedWorlds.includes(worldId);
+    var isUnlocked = isWorldUnlocked(worldId);
     var row = document.createElement("div");
     row.className = "world-progress-row";
     row.innerHTML =
@@ -104,7 +113,7 @@ function renderDashboard() {
     "<li>\uD83D\uDCC5 Encourage 10-15 minutes of daily practice</li>" +
     "<li>\uD83C\uDFAF Celebrate small wins and progress</li>" +
     "<li>\uD83D\uDCA1 Wrong answers = learning opportunities</li>" +
-    "<li>\u2B50 Stars are earned every 10 correct answers</li>" +
+    "<li>\u2B50 Stars are earned at lesson completion based on accuracy</li>" +
     "<li>\uD83D\uDCDD Use the Work Area to draw calculations</li>" +
     '<li>\uD83D\uDCA1 Tap "I Need Help" for guided hints</li>' +
     "</ul>" +

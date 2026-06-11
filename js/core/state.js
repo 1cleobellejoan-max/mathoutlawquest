@@ -12,12 +12,18 @@ let gameState = {
     fractionForest: "easy",
     decimalDocks: "easy",
     mathReadingTrail: "easy",
+    ratioRidge: "easy",
   },
   currentQuestion: null,
   totalCorrect: 0,
   totalQuestions: 0,
   hintsUsed: 0,
   unlockedWorlds: ["numberRanch", "subtractionCanyon"],
+  progression: {
+    xp: 0,
+    level: 1,
+    xpToNextLevel: 100,
+  },
   worldProgress: {
     numberRanch: { correct: 0, total: 0 },
     subtractionCanyon: { correct: 0, total: 0 },
@@ -28,20 +34,26 @@ let gameState = {
     fractionForest: { correct: 0, total: 0 },
     decimalDocks: { correct: 0, total: 0 },
     mathReadingTrail: { correct: 0, total: 0 },
+    ratioRidge: { correct: 0, total: 0 },
   },
   stars: 0,
   badges: [],
   factIndex: 0,
   questionCount: 0,
   wrongAttempts: 0,
-  timeRemaining: 0,
-  timerInterval: null,
-  isTimedOut: false,
   retryActive: false,
   retryQuestion: null,
+  // Lesson session tracking
+  lessonStartTime: null,
+  lessonEndTime: null,
+  lessonSession: null, // { correct, incorrect, xpGained, starsGained, bestChain, duration }
+  currentChain: 0,
+  bestChain: 0,
+  sessionXpGained: 0,
+  sessionCorrect: 0,
+  sessionIncorrect: 0,
   debugMode: false,
   debugSettings: {
-    timerEnabled: true,
     supportBoardOverride: null,
     vocabHighlightsEnabled: true,
     readAloudEnabled: true,
@@ -49,6 +61,20 @@ let gameState = {
   },
   dailyQuest: null,
   notifications: [],
+  // Reward system
+  rewardPoints: 0,
+  claimedMilestones: [],
+  milestonePending: false,
+  pendingMilestoneIndex: -1,
+  // Weekly quest
+  weeklyQuest: null,
+  // Study time tracking
+  studyStats: {
+    totalStudyTimeMs: 0,
+    lessonsCompleted: 0,
+    longestSessionMs: 0,
+  },
+  lessonHistory: [],
 };
 
 // ===== SAVE SYSTEM =====
@@ -112,18 +138,49 @@ function loadGame() {
 
       if (!gameState.debugSettings) {
         gameState.debugSettings = {
-          timerEnabled: true,
           supportBoardOverride: null,
           vocabHighlightsEnabled: true,
           readAloudEnabled: true,
           writingLayerEnabled: true,
         };
       }
+
+      if (!gameState.progression) {
+        gameState.progression = {
+          xp: 0,
+          level: 1,
+          xpToNextLevel: 100,
+        };
+      }
+      if (typeof gameState.progression.xp !== "number") {
+        gameState.progression.xp = 0;
+      }
+      if (typeof gameState.progression.level !== "number") {
+        gameState.progression.level = 1;
+      }
+      if (typeof gameState.progression.xpToNextLevel !== "number") {
+        gameState.progression.xpToNextLevel = 100;
+      }
+
+      updateUnlockedWorlds();
       return true;
     }
   } catch (e) {
     console.log("Load failed:", e);
   }
+  // Migrate: ensure studyStats exists
+  if (!gameState.studyStats) {
+    gameState.studyStats = {
+      totalStudyTimeMs: 0,
+      lessonsCompleted: 0,
+      longestSessionMs: 0,
+    };
+  }
+  // Migrate: ensure lessonHistory exists
+  if (!gameState.lessonHistory) {
+    gameState.lessonHistory = [];
+  }
+
   return false;
 }
 
@@ -136,5 +193,57 @@ function resetGame() {
 }
 
 function checkUnlocks() {
-  // Worlds are all unlocked by default now (XP system removed)
+  updateUnlockedWorlds();
+}
+
+function isWorldUnlocked(worldId) {
+  var requiredStars = WORLD_UNLOCK_REQUIREMENTS[worldId];
+  if (typeof requiredStars !== "number") return false;
+  return gameState.stars >= requiredStars;
+}
+
+function updateUnlockedWorlds() {
+  gameState.unlockedWorlds = Object.keys(WORLD_UNLOCK_REQUIREMENTS).filter(
+    function (worldId) {
+      return isWorldUnlocked(worldId);
+    },
+  );
+}
+
+function addXp(amount) {
+  if (!gameState.progression) {
+    gameState.progression = {
+      xp: 0,
+      level: 1,
+      xpToNextLevel: 100,
+    };
+  }
+  // Migrate saved data: ensure studyStats exists
+  if (!gameState.studyStats) {
+    gameState.studyStats = {
+      totalStudyTimeMs: 0,
+      lessonsCompleted: 0,
+      longestSessionMs: 0,
+    };
+  }
+  // Migrate saved data: ensure lessonHistory exists
+  if (!gameState.lessonHistory) {
+    gameState.lessonHistory = [];
+  }
+
+  gameState.progression.xp += amount;
+  while (gameState.progression.xp >= gameState.progression.xpToNextLevel) {
+    gameState.progression.xp -= gameState.progression.xpToNextLevel;
+    gameState.progression.level++;
+    gameState.progression.xpToNextLevel += 50;
+  }
+}
+
+function calculateLessonStars(correct, total) {
+  if (total <= 0) return 0;
+  var accuracy = (correct / total) * 100;
+  if (accuracy >= 90) return 3;
+  if (accuracy >= 75) return 2;
+  if (accuracy >= 50) return 1;
+  return 0;
 }

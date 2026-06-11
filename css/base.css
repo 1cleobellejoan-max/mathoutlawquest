@@ -90,12 +90,8 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 
-  .answer-area {
+  .answer-row {
     flex-direction: column;
-  }
-
-  .help-btn {
-    width: 100%;
   }
 
   .submit-btn {

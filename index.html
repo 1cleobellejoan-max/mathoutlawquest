@@ -25,22 +25,44 @@
     <div id="app">
       <!-- ===== STATUS BAR ===== -->
       <div id="statusBar">
-        <button
-          class="status-btn notif-bell-btn"
-          id="notificationBell"
-          onclick="toggleNotificationPanel()"
-        >
-          🔔<span id="notifBadge" class="notif-badge" style="display: none"
-            >!</span
+        <div id="xpBarContainer" class="xp-bar-container"></div>
+        <div class="status-actions">
+          <button
+            class="status-btn notif-bell-btn"
+            id="notificationBell"
+            onclick="toggleNotificationPanel()"
           >
-        </button>
-        <button class="status-btn" onclick="showScreen('dashboard')">📊</button>
-        <button class="gear-btn" id="gearBtn" onclick="toggleDebugPanel()">
-          ⚙️
-        </button>
+            🔔<span id="notifBadge" class="notif-badge" style="display: none"
+              >!</span
+            >
+          </button>
+          <button
+            class="status-btn quest-toggle-btn"
+            onclick="toggleQuestPanel()"
+          >
+            📋
+          </button>
+          <button class="status-btn" onclick="showScreen('rewards')">🎁</button>
+          <button class="status-btn" onclick="showScreen('dashboard')">
+            📊
+          </button>
+          <button class="gear-btn" id="gearBtn" onclick="toggleDebugPanel()">
+            ⚙️
+          </button>
+        </div>
       </div>
+      <div id="questPanel" class="quest-panel" style="display: none"></div>
 
       <div id="notificationContainer"></div>
+
+      <!-- REWARDS SCREEN (hidden by default) -->
+      <div id="rewards" class="screen">
+        <div class="rewards-header">
+          <h2>🎁 Treasure Trail</h2>
+          <p>Your journey to awesome rewards!</p>
+        </div>
+        <div id="rewardsContent"></div>
+      </div>
 
       <div id="notificationPanel" class="notif-panel" style="display: none">
         <div class="notif-panel-header">
@@ -81,41 +103,31 @@
 
       <!-- GAME SCREEN -->
       <div id="game" class="screen">
-        <div id="timerContainer" class="timer-container">
-          <div class="timer-bar-outer">
-            <div class="timer-bar-fill" id="timerFill"></div>
-          </div>
-          <div class="timer-text" id="timerDisplay">0:30</div>
-        </div>
         <div class="question-card">
           <div id="questionContainer"></div>
-          <div class="work-area-container">
-            <div class="work-area-label">📝 Work Area</div>
-            <canvas id="workAreaCanvas" class="work-area-canvas"></canvas>
-            <div class="work-area-controls">
-              <button class="wa-btn" id="workUndoBtn" onclick="undoStroke()">
-                ↩ Undo
-              </button>
-              <button class="wa-btn wa-btn-danger" onclick="clearCanvas()">
-                🗑️ Clear
+          <div class="answer-area">
+            <div class="answer-row">
+              <input
+                type="text"
+                id="answerInput"
+                class="answer-input"
+                placeholder="Type your answer..."
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <button
+                id="submitBtn"
+                class="submit-btn"
+                onclick="submitAnswer()"
+              >
+                Submit
               </button>
             </div>
-          </div>
-          <div class="answer-area">
-            <input
-              type="text"
-              id="answerInput"
-              class="answer-input"
-              placeholder="Type your answer..."
-              inputmode="numeric"
-              autocomplete="off"
-            />
-            <button id="helpBtn" class="help-btn" onclick="showHelp()">
-              💡 I Need Help
-            </button>
-            <button id="submitBtn" class="submit-btn" onclick="submitAnswer()">
-              Submit
-            </button>
+            <div class="help-row">
+              <button id="helpBtn" class="help-btn" onclick="showHelp()">
+                Need Help?
+              </button>
+            </div>
           </div>
           <div id="feedback" class="feedback"></div>
           <div id="hintBox" class="hint-box"></div>
@@ -199,25 +211,6 @@
                 onclick="debugLockAllWorlds()"
               >
                 Lock Progression
-              </button>
-            </div>
-          </div>
-          <div class="debug-section">
-            <h4>⏱️ Timer</h4>
-            <div class="debug-btn-row">
-              <button
-                class="debug-toggle-btn"
-                id="debugTimerOn"
-                onclick="debugTimerToggle(true)"
-              >
-                Timer ON
-              </button>
-              <button
-                class="debug-toggle-btn"
-                id="debugTimerOff"
-                onclick="debugTimerToggle(false)"
-              >
-                Timer OFF
               </button>
             </div>
           </div>
@@ -306,6 +299,7 @@
     <script src="js/ui/debug.js"></script>
     <script src="js/ui/dashboard.js"></script>
     <script src="js/ui/game.js"></script>
+    <script src="js/ui/rewards.js"></script>
     <!-- Standalone -->
     <script src="js/analogClock.js"></script>
     <script src="js/handwriting.js"></script>
