@@ -58,9 +58,7 @@ function renderMap() {
     } else {
       var requiredStars = WORLD_UNLOCK_REQUIREMENTS[worldId] || 0;
       html +=
-        '<div class="world-lock-info">Needs ' +
-        requiredStars +
-        " stars</div>";
+        '<div class="world-lock-info">Needs ' + requiredStars + " stars</div>";
       html +=
         '<button class="play-btn" onclick="playWorld(\'' +
         worldId +
@@ -92,8 +90,17 @@ function playWorld(worldId) {
     return;
   }
   gameState.selectedWorld = worldId;
-  startLesson();
   var world = WORLDS[worldId];
+  // Special handlers
+  if (worldId === "numberKingdom") {
+    if (typeof enterKingdom === "function") {
+      enterKingdom();
+    } else {
+      showNotification("Kingdom not loaded yet");
+    }
+    return;
+  }
+  startLesson();
   if (worldId === "mathReadingTrail") {
     var themeIndex = gameState.questionCount;
     var themeName = getReadingThemeForIndex(themeIndex);

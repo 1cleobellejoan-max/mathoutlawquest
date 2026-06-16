@@ -13,6 +13,8 @@ let gameState = {
     decimalDocks: "easy",
     mathReadingTrail: "easy",
     ratioRidge: "easy",
+    dataHarbor: "easy",
+    numberKingdom: "easy",
   },
   currentQuestion: null,
   totalCorrect: 0,
@@ -35,6 +37,8 @@ let gameState = {
     decimalDocks: { correct: 0, total: 0 },
     mathReadingTrail: { correct: 0, total: 0 },
     ratioRidge: { correct: 0, total: 0 },
+    dataHarbor: { correct: 0, total: 0 },
+    numberKingdom: { correct: 0, total: 0 },
   },
   stars: 0,
   badges: [],
@@ -75,6 +79,21 @@ let gameState = {
     longestSessionMs: 0,
   },
   lessonHistory: [],
+  // Number Kingdom specific state
+  kingdomStage: 0, // 0-5 for stages, 6 for boss
+  kingdomStageProgress: [0, 0, 0, 0, 0, 0], // progress per stage (0 to stageRequired)
+  kingdomStageCompleted: [false, false, false, false, false, false],
+  kingdomCoins: 0,
+  kingdomHearts: 3,
+  kingdomBossHP: 10,
+  kingdomBossTimer: 60,
+  kingdomWrongAnswers: [], // [{ question, correctAnswer, userAnswer, stage }]
+  kingdomPracticeMode: false,
+  kingdomPracticeQueue: [],
+  kingdomBossDefeated: false,
+  kingdomDailyCleared: false,
+  kingdomWeeklyStreak: 0,
+  kingdomLastPlayDate: null,
 };
 
 // ===== SAVE SYSTEM =====
@@ -161,6 +180,26 @@ function loadGame() {
       if (typeof gameState.progression.xpToNextLevel !== "number") {
         gameState.progression.xpToNextLevel = 100;
       }
+
+      // Migrate Number Kingdom defaults
+      if (!gameState.kingdomStageProgress)
+        gameState.kingdomStageProgress = [0, 0, 0, 0, 0, 0];
+      if (!gameState.kingdomStageCompleted)
+        gameState.kingdomStageCompleted = [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+        ];
+      if (typeof gameState.kingdomCoins !== "number")
+        gameState.kingdomCoins = 0;
+      if (typeof gameState.kingdomHearts !== "number")
+        gameState.kingdomHearts = 3;
+      if (typeof gameState.kingdomBossDefeated !== "boolean")
+        gameState.kingdomBossDefeated = false;
+      if (!gameState.kingdomWrongAnswers) gameState.kingdomWrongAnswers = [];
 
       updateUnlockedWorlds();
       return true;

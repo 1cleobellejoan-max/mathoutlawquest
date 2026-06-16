@@ -1,0 +1,470 @@
+/* ===== NUMBER KINGDOM CSS ===== */
+
+/* Kingdom Map */
+.kingdom-backdrop {
+  padding: 16px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kingdom-map-header {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: white;
+  text-align: center;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.kingdom-stats-bar {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.kingdom-stage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.kingdom-stage-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+  cursor: pointer;
+  border: 3px solid transparent;
+}
+
+.kingdom-stage-card:active {
+  transform: scale(0.95);
+}
+
+.kingdom-stage-open {
+  border-color: #d32f2f;
+}
+
+.kingdom-stage-done {
+  border-color: #4caf50;
+  opacity: 0.85;
+}
+
+.kingdom-stage-locked {
+  border-color: #999;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kingdom-stage-emoji {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.kingdom-stage-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.kingdom-stage-desc {
+  font-size: 0.7rem;
+  color: #666;
+  margin-top: 3px;
+}
+
+.kingdom-stage-check {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4caf50;
+  margin-top: 4px;
+}
+
+.kingdom-boss-entry {
+  max-width: 500px;
+  width: 100%;
+  background: rgba(255, 215, 0, 0.15);
+  border: 3px solid #ffd700;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  backdrop-filter: blur(5px);
+}
+
+.kingdom-boss-entry:active {
+  transform: scale(0.95);
+}
+
+/* Kingdom Game Screen */
+.kingdom-game-header {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.kingdom-progress-bar-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 6px auto;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  height: 22px;
+}
+
+.kingdom-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #d32f2f, #ff9800);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.kingdom-progress-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.kingdom-question-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  margin-top: 8px;
+  text-align: center;
+}
+
+.kingdom-question-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #d32f2f;
+  margin-bottom: 8px;
+}
+
+.kingdom-answer-area {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.kingdom-answer-input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  border: 3px solid #eee;
+  border-radius: 12px;
+  outline: none;
+  text-align: center;
+  font-weight: 600;
+  transition: border-color 0.2s;
+  min-height: 44px;
+}
+
+.kingdom-answer-input:focus {
+  border-color: #d32f2f;
+}
+
+.kingdom-answer-input:disabled {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.kingdom-submit-btn {
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s;
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+.kingdom-submit-btn:active {
+  transform: scale(0.95);
+}
+
+.kingdom-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+.kingdom-help-btn {
+  background: none;
+  border: none;
+  color: #d32f2f;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 10px;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  touch-action: manipulation;
+  background: rgba(211, 47, 47, 0.08);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.kingdom-feedback {
+  font-size: 1rem;
+  font-weight: 700;
+  min-height: 24px;
+  margin-bottom: 6px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.kingdom-correct {
+  color: #4caf50;
+  background: #e8f5e9;
+}
+
+.kingdom-wrong {
+  color: #f44336;
+  background: #ffebee;
+}
+
+.kingdom-hint-box {
+  background: #fff3e0;
+  border: 2px solid #ff9800;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #555;
+  text-align: left;
+  display: none;
+  animation: slideIn 0.3s ease;
+}
+
+.kingdom-hint-visible {
+  display: block;
+}
+
+.kingdom-placeholder {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* Kingdom Completion Overlays */
+.kingdom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+}
+
+.kingdom-complete-card {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  text-align: center;
+}
+
+.kingdom-complete-emoji {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.kingdom-complete-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #d32f2f;
+  margin-bottom: 12px;
+}
+
+.kingdom-complete-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.kingdom-complete-stats div {
+  padding: 6px 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.kingdom-perfect-bonus {
+  background: #fff8e1 !important;
+  color: #f57c00 !important;
+  font-weight: 800 !important;
+}
+
+.kingdom-complete-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kingdom-btn {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+.kingdom-btn:active {
+  transform: scale(0.95);
+}
+
+.kingdom-btn-secondary {
+  background: rgba(0, 0, 0, 0.08);
+  color: #555;
+}
+
+.kingdom-boss-card {
+  border: 3px solid #ffd700;
+}
+
+.kingdom-boss-title {
+  color: #ffd700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.kingdom-boss-badge {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+  padding: 8px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.kingdom-fail-card {
+  border: 3px solid #f44336;
+}
+
+.kingdom-fail-text {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+/* Kingdom Review */
+.kingdom-review-content {
+  margin-top: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.kingdom-review-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.kingdom-review-empty {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.kingdom-review-item {
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.kingdom-review-q {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 3px;
+}
+
+.kingdom-review-your {
+  color: #f44336;
+}
+
+.kingdom-review-correct {
+  color: #4caf50;
+}
+
+.kingdom-review-hint {
+  color: #ff9800;
+  font-style: italic;
+  margin-top: 3px;
+}
+
+.kingdom-wrong-text {
+  color: #f44336;
+  font-weight: 700;
+}
+
+.kingdom-correct-text {
+  color: #4caf50;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .kingdom-stage-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}

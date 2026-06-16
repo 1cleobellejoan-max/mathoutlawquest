@@ -16,6 +16,10 @@ function showScreen(screenId) {
     renderDashboard();
   } else if (screenId === "rewards") {
     renderRewards();
+  } else if (screenId === "kingdomMap") {
+    if (typeof renderKingdomMap === "function") {
+      renderKingdomMap();
+    }
   }
   updateDebugLabel();
   // Update XP bar on every screen change

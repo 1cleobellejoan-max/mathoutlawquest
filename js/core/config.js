@@ -104,4 +104,6 @@ const WORLD_UNLOCK_REQUIREMENTS = {
   decimalDocks: 25,
   mathReadingTrail: 30,
   ratioRidge: 35,
+  dataHarbor: 40,
+  numberKingdom: 45,
 };

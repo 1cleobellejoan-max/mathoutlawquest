@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/screens.css" />
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/debug.css" />
+    <link rel="stylesheet" href="css/kingdom.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>"
@@ -141,6 +142,93 @@
           </button>
           <button class="game-nav-btn" onclick="showScreen('dashboard')">
             📊 Progress
+          </button>
+        </div>
+      </div>
+
+      <!-- KINGDOM MAP SCREEN -->
+      <div id="kingdomMap" class="screen">
+        <div class="kingdom-backdrop">
+          <div id="kingdomMapContainer"></div>
+          <div style="margin-top: 15px; text-align: center">
+            <button
+              class="game-nav-btn"
+              onclick="showScreen('map')"
+              style="
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 12px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+              "
+            >
+              🗺️ Back to World Map
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KINGDOM GAME SCREEN -->
+      <div id="kingdomGame" class="screen">
+        <div class="kingdom-game-header">
+          <div id="kingdomHeartsDisplay"></div>
+          <div id="kingdomCoinsDisplay"></div>
+          <div id="kingdomTimerDisplay"></div>
+          <div id="kingdomBossHPDisplay"></div>
+        </div>
+        <div class="kingdom-progress-bar-container">
+          <div id="kingdomProgressBar" class="kingdom-progress-bar"></div>
+          <span id="kingdomProgressLabel" class="kingdom-progress-label"
+            >0/5</span
+          >
+        </div>
+        <div class="kingdom-question-card">
+          <div id="kingdomQuestionContainer"></div>
+          <div class="kingdom-answer-area">
+            <input
+              type="text"
+              id="kingdomAnswerInput"
+              class="kingdom-answer-input"
+              placeholder="Type your answer..."
+              inputmode="numeric"
+              autocomplete="off"
+              onkeydown="if (event.key === 'Enter') submitKingdomAnswer();"
+            />
+            <button
+              id="kingdomSubmitBtn"
+              class="kingdom-submit-btn"
+              onclick="submitKingdomAnswer()"
+            >
+              Submit
+            </button>
+          </div>
+          <button
+            class="kingdom-help-btn"
+            onclick="showKingdomHint(gameState.currentQuestion)"
+          >
+            💡 Hint
+          </button>
+          <div id="kingdomFeedback" class="kingdom-feedback"></div>
+          <div id="kingdomHintBox" class="kingdom-hint-box"></div>
+        </div>
+        <div style="margin-top: 12px; text-align: center">
+          <button
+            class="game-nav-btn"
+            onclick="showScreen('kingdomMap')"
+            style="
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+              border: none;
+              padding: 10px 24px;
+              border-radius: 12px;
+              font-size: 0.85rem;
+              cursor: pointer;
+            "
+          >
+            🏰 Back to Stages
           </button>
         </div>
       </div>
@@ -291,6 +379,7 @@
     <script src="js/utils/events.js"></script>
     <!-- Features -->
     <script src="js/features/dailyQuest.js"></script>
+    <script src="js/features/numberKingdom.js"></script>
     <!-- UI -->
     <script src="js/ui/readingTheme.js"></script>
     <script src="js/ui/screens.js"></script>

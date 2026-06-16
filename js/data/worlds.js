@@ -712,6 +712,315 @@ const WORLDS = {
       return "Read the story carefully. Look for key numbers and decide which operation to use (+, \u2212, \u00D7, \u00F7).";
     },
   },
+  dataHarbor: {
+    id: "dataHarbor",
+    name: "Data Harbor",
+    emoji: "\u{1F4CA}",
+    color: "#1565C0",
+    description: "Tables, Graphs & Data Interpretation",
+    difficulties: ["easy", "medium", "hard"],
+    supportBoard: "dataHarbor",
+    generateQuestion: function (difficulty) {
+      var skill = rand(0, 2); // 0=Tables, 1=Graphs, 2=Data Interpretation
+      var questionText, answer;
+      switch (skill) {
+        case 0: // Tables
+          switch (difficulty) {
+            case "easy": {
+              var days = [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+              ];
+              var fruits = ["Apples", "Oranges", "Bananas"];
+              var fruit = fruits[rand(0, fruits.length - 1)];
+              var sales = [];
+              for (var i = 0; i < days.length; i++) sales.push(rand(2, 9) * 10);
+              var dayIdx = rand(0, days.length - 1);
+              var tableHtml = "<table class='data-table'><tr><th>Day</th>";
+              for (var d = 0; d < days.length; d++)
+                tableHtml += "<th>" + days[d] + "</th>";
+              tableHtml += "</tr><tr><th>" + fruit + "</th>";
+              for (var s = 0; s < sales.length; s++)
+                tableHtml += "<td>" + sales[s] + "</td>";
+              tableHtml += "</tr></table>";
+              questionText =
+                tableHtml +
+                "\nThe table shows " +
+                fruit.toLowerCase() +
+                " sales.\nHow many " +
+                fruit.toLowerCase() +
+                " were sold on " +
+                days[dayIdx] +
+                "?";
+              answer = sales[dayIdx];
+              break;
+            }
+            case "medium": {
+              var days2 = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+              var items2 = ["Pencils", "Erasers", "Books"];
+              var itemA = items2[0];
+              var itemB = items2[1];
+              var dataA = [];
+              var dataB = [];
+              for (var i2 = 0; i2 < days2.length; i2++) {
+                dataA.push(rand(3, 9) * 10);
+                dataB.push(rand(2, 8) * 10);
+              }
+              var tableHtml2 = "<table class='data-table'><tr><th>Day</th>";
+              for (var d2 = 0; d2 < days2.length; d2++)
+                tableHtml2 += "<th>" + days2[d2] + "</th>";
+              tableHtml2 += "</tr><tr><th>" + itemA + "</th>";
+              for (var s2 = 0; s2 < dataA.length; s2++)
+                tableHtml2 += "<td>" + dataA[s2] + "</td>";
+              tableHtml2 += "</tr><tr><th>" + itemB + "</th>";
+              for (var s3 = 0; s3 < dataB.length; s3++)
+                tableHtml2 += "<td>" + dataB[s3] + "</td>";
+              tableHtml2 += "</tr></table>";
+              var totalA = dataA.reduce(function (a, b) {
+                return a + b;
+              }, 0);
+              var totalB = dataB.reduce(function (a, b) {
+                return a + b;
+              }, 0);
+              questionText =
+                tableHtml2 +
+                "\nThe table shows sales of " +
+                itemA.toLowerCase() +
+                " and " +
+                itemB.toLowerCase() +
+                ".\nHow many more " +
+                itemA.toLowerCase() +
+                " than " +
+                itemB.toLowerCase() +
+                " were sold total?";
+              answer = totalA - totalB;
+              break;
+            }
+            case "hard": {
+              var days3 = ["Week 1", "Week 2", "Week 3", "Week 4"];
+              var students = ["Grade 4", "Grade 5", "Grade 6"];
+              var gIdx = rand(0, students.length - 1);
+              var grade = students[gIdx];
+              var scores = [];
+              for (var i3 = 0; i3 < days3.length; i3++)
+                scores.push(rand(5, 20) * 5);
+              var tableHtml3 = "<table class='data-table'><tr><th>Week</th>";
+              for (var d3 = 0; d3 < days3.length; d3++)
+                tableHtml3 += "<th>" + days3[d3] + "</th>";
+              tableHtml3 += "</tr><tr><th>" + grade + "</th>";
+              for (var s4 = 0; s4 < scores.length; s4++)
+                tableHtml3 += "<td>" + scores[s4] + "</td>";
+              tableHtml3 += "</tr></table>";
+              var sum = scores.reduce(function (a, b) {
+                return a + b;
+              }, 0);
+              questionText =
+                tableHtml3 +
+                "\nThe table shows " +
+                grade +
+                " reading scores.\nWhat is the mean (average) score?\n(Round to nearest whole number)";
+              answer = Math.round(sum / scores.length);
+              break;
+            }
+          }
+          break;
+        case 1: // Graphs (bar chart using emoji)
+          switch (difficulty) {
+            case "easy": {
+              var categories = ["Cats", "Dogs", "Birds", "Fish"];
+              var values = [];
+              for (var i4 = 0; i4 < categories.length; i4++)
+                values.push(rand(2, 6));
+              var barChart = "Pet Survey Results:\n";
+              for (var b = 0; b < categories.length; b++) {
+                barChart +=
+                  categories[b] +
+                  ": " +
+                  "\u{1F4CA}".repeat(values[b]) +
+                  " " +
+                  values[b] +
+                  "\n";
+              }
+              var qIdx = rand(0, categories.length - 1);
+              questionText =
+                barChart +
+                "\nThe bar graph shows pet survey results.\nHow many people voted for " +
+                categories[qIdx] +
+                "?";
+              answer = values[qIdx];
+              break;
+            }
+            case "medium": {
+              var fruits2 = ["Mango", "Banana", "Apple", "Grape"];
+              var votes = [];
+              for (var i5 = 0; i5 < fruits2.length; i5++)
+                votes.push(rand(2, 7) * 3);
+              var barChart2 = "Favorite Fruit Votes:\n";
+              for (var b2 = 0; b2 < fruits2.length; b2++) {
+                barChart2 +=
+                  fruits2[b2] +
+                  ": " +
+                  "\u{1F34E}".repeat(votes[b2] / 3) +
+                  " " +
+                  votes[b2] +
+                  "\n";
+              }
+              var maxVotes = Math.max.apply(null, votes);
+              var minVotes = Math.min.apply(null, votes);
+              questionText =
+                barChart2 +
+                "\nWhat is the difference between the most and least voted fruits?";
+              answer = maxVotes - minVotes;
+              break;
+            }
+            case "hard": {
+              var months = ["Jan", "Feb", "Mar", "Apr"];
+              var rainfall = [];
+              for (var i6 = 0; i6 < months.length; i6++)
+                rainfall.push(rand(4, 15) * 10);
+              var barChart3 = "Monthly Rainfall (mm):\n";
+              for (var b3 = 0; b3 < months.length; b3++) {
+                barChart3 +=
+                  months[b3] +
+                  ": " +
+                  "\uD83C\uDF27\uFE0F".repeat(rainfall[b3] / 10) +
+                  " " +
+                  rainfall[b3] +
+                  "mm\n";
+              }
+              var sumRain = rainfall.reduce(function (a, b) {
+                return a + b;
+              }, 0);
+              questionText =
+                barChart3 +
+                "\nWhat is the mean monthly rainfall?\n(Round to nearest whole number)";
+              answer = Math.round(sumRain / rainfall.length);
+              break;
+            }
+          }
+          break;
+        case 2: // Data Interpretation (mean, median, mode, range)
+          switch (difficulty) {
+            case "easy": {
+              var setSize = rand(4, 6);
+              var numSet = [];
+              var modes = [3, 4, 5, 6, 7, 8];
+              var modeVal = modes[rand(0, modes.length - 1)];
+              for (var i7 = 0; i7 < setSize - 2; i7++) numSet.push(rand(1, 9));
+              numSet.push(modeVal);
+              numSet.push(modeVal);
+              var displaySet = numSet.slice().sort(function (a, b) {
+                return a - b;
+              });
+              questionText =
+                "Data set: " +
+                displaySet.join(", ") +
+                "\n\nWhat is the mode (most frequent number)?";
+              answer = modeVal;
+              break;
+            }
+            case "medium": {
+              var setSize2 = rand(4, 6);
+              var numSet2 = [];
+              for (var i8 = 0; i8 < setSize2; i8++)
+                numSet2.push(rand(2, 9) * 10);
+              var sorted = numSet2.slice().sort(function (a, b) {
+                return a - b;
+              });
+              var sum2 = sorted.reduce(function (a, b) {
+                return a + b;
+              }, 0);
+              questionText =
+                "Scores: " +
+                sorted.join(", ") +
+                "\n\nWhat is the mean (average) score?";
+              answer = Math.round(sum2 / sorted.length);
+              break;
+            }
+            case "hard": {
+              var setSize3 = rand(5, 7);
+              var numSet3 = [];
+              for (var i9 = 0; i9 < setSize3; i9++) numSet3.push(rand(1, 50));
+              var sorted3 = numSet3.slice().sort(function (a, b) {
+                return a - b;
+              });
+              var min3 = sorted3[0];
+              var max3 = sorted3[sorted3.length - 1];
+              // median
+              var median;
+              var mid = Math.floor(sorted3.length / 2);
+              if (sorted3.length % 2 === 0) {
+                median = Math.round((sorted3[mid - 1] + sorted3[mid]) / 2);
+              } else {
+                median = sorted3[mid];
+              }
+              questionText =
+                "Data set: " +
+                sorted3.join(", ") +
+                "\n\nWhat is the median (middle number)?";
+              answer = median;
+              break;
+            }
+          }
+          break;
+      }
+      return {
+        question: questionText,
+        answer: answer,
+        difficulty: difficulty,
+        world: "dataHarbor",
+      };
+    },
+    getHint: function (question) {
+      if (question.includes("table") || question.includes("table")) {
+        return "Look at the table carefully.\nFind the row and column that match what the question asks.\nThe answer is where they meet!";
+      }
+      if (
+        question.includes("bar graph") ||
+        question.includes("votes") ||
+        question.includes("survey") ||
+        question.includes("Rainfall")
+      ) {
+        return "Look at the bar graph.\nFind the category mentioned in the question.\nRead the number next to the bar (or count the symbols).";
+      }
+      if (question.includes("mode")) {
+        return "The mode is the number that appears most often.\nLook for the value that occurs the most times in the data set.";
+      }
+      if (question.includes("mean") || question.includes("average")) {
+        return "To find the mean (average):\n1) Add all numbers together\n2) Divide by how many numbers there are";
+      }
+      if (question.includes("median")) {
+        return "The median is the middle number.\n1) Arrange numbers from smallest to largest\n2) Find the middle number\n(Hint: cross off from both ends)";
+      }
+      return "Read the data carefully. Identify what you know and what the question asks. Then calculate step by step.";
+    },
+  },
+  numberKingdom: {
+    id: "numberKingdom",
+    name: "Number Kingdom",
+    emoji: "\u{1F3F0}",
+    color: "#D32F2F",
+    description: "4 Operations Adventure!",
+    difficulties: ["easy", "medium", "hard"],
+    generateQuestion: function (difficulty) {
+      // Number Kingdom uses its own stage system
+      return {
+        question: "Enter Number Kingdom to begin!",
+        answer: 0,
+        difficulty: difficulty,
+        world: "numberKingdom",
+      };
+    },
+    getHint: function () {
+      return "Enter the Kingdom to start your adventure!";
+    },
+    onClick: function () {
+      enterKingdom();
+    },
+  },
   ratioRidge: {
     id: "ratioRidge",
     name: "Ratio Ridge",

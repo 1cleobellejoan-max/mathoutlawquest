@@ -97,6 +97,40 @@ const SUPPORT_BOARDS = {
       </div>
     `,
   },
+  dataHarbor: {
+    title: "\u{1F4CA} Data & Graphs Reference",
+    content: `
+      <div class="support-board">
+        <div class="fact-family-grid">
+          <div class="fact-family">
+            <h4>\u{1F4C5} Reading Tables</h4>
+            <p>Find the row you need and the column you need.</p>
+            <p>Where they meet is your answer!</p>
+            <p>Example: To find Monday's apple sales, look at the "Monday" column and "Apples" row.</p>
+          </div>
+          <div class="fact-family">
+            <h4>\u{1F4CA} Reading Bar Graphs</h4>
+            <p>Each bar shows a value for a category.</p>
+            <p>Read the number at the top of the bar.</p>
+            <p>To compare: subtract the smaller from the larger.</p>
+          </div>
+          <div class="fact-family">
+            <h4>\u{1F522} Mean (Average)</h4>
+            <p>1) Add all numbers together</p>
+            <p>2) Divide by how many numbers there are</p>
+            <p>Example: 4, 6, 8 → (4+6+8)\u00F73 = 18\u00F73 = 6</p>
+          </div>
+          <div class="fact-family">
+            <h4>\u{1F522} Median & Mode</h4>
+            <p><strong>Median</strong> = middle number when sorted</p>
+            <p>Cross off from both ends until you reach the middle.</p>
+            <p><strong>Mode</strong> = the number that appears most often</p>
+          </div>
+        </div>
+        <p class="support-tip">\u{1F4A1} <strong>Tip:</strong> Always read the question carefully! Look for key words like "total", "difference", "average", or "most frequent".</p>
+      </div>
+    `,
+  },
   ratioRidge: {
     title: "\u{1F4C8} Ratio & Percent Reference",
     content: `

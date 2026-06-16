@@ -996,6 +996,37 @@
   flex-wrap: wrap;
 }
 
+/* ===== DATA TABLE (Data Harbor) ===== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin: 8px 0;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #e0e0e0;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.data-table th {
+  background: #1565c0;
+  color: white;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.data-table td {
+  color: #333;
+  font-weight: 600;
+}
+
 .study-achievement-badge {
   background: rgba(255, 215, 0, 0.2);
   border: 1px solid rgba(255, 215, 0, 0.4);
